@@ -1,0 +1,5 @@
+06-app/
+07-templates/
+*.bak
+.DS_Store
+Thumbs.db

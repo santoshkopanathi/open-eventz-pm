@@ -1,0 +1,70 @@
+# Market Research Report — Open Eventz (Plano-Frisco Pilot)
+
+*Methodology note: figures for Plano and Frisco themselves come from Census Bureau / American Community Survey data via city and demographic-data sources. Behavioral and trend questions (sections 2-4, 6-9) are harder to source hyperlocally — there's no published "Plano-Frisco parent behavior survey" — so this section leans on national surveys (Pew Research, NCES, family-travel and parenting-industry research) applied to a market that's notably higher-income and more family-dense than the US average. Treat the national figures as informed context, not literal local measurements, until validated against this metro directly.*
+
+## 1. Total Addressable Market — Plano & Frisco
+
+| | Frisco | Plano | Combined |
+|---|---|---|---|
+| 2026 population | ~245,000 | ~295,000 | ~540,000 |
+| Total households | ~87,650 | ~112,400 | ~200,000 |
+| School-age population (5-17) | ~53,700 (21.9%) | ~49,800 (under-15 share, 16.9%) | ~100,000-110,000 |
+| Households with children under 18 | ~41,800 (47.7% of households, 2020 ACS) | Comparable share, ~47% | order of magnitude ~90,000-95,000 |
+| Median household income | ~$150,000 | ~$112,000 | — |
+
+So the core addressable population — households in Frisco and Plano with at least one school-age child — is on the order of **90,000-95,000 households**, representing roughly **100,000-110,000 children**. That's the TAM in the literal sense: the universe of households who could plausibly use Open Eventz at all.
+
+What this doesn't tell you is the more useful number: how many of those households would actually adopt and regularly use a free-activity-finder app (the Serviceable Addressable Market) or what's realistically capturable in a pilot phase (Serviceable Obtainable Market). Neither of those can be responsibly sized from public data — they depend on assumptions about adoption rate, awareness, and competitive switching that don't exist yet. That's a gap worth closing with even lightweight primary research (a short survey to the personas' networks, or usage data once a pilot is live) rather than guessing a percentage that would just be invented precision.
+
+## 2. General Market Trends — What They Do Evenings and Weekends
+
+The biggest structural fact shaping this is *when* parents are actually free, and it's stratified by income and job type. A Pew Research survey of U.S. working parents (March 2026) found 75% have at least some flexibility to attend their kids' activities during work hours, but only 46% have a real amount of it — and that flexibility skews sharply by income: 54% of upper-income parents have a lot of flexibility versus 40% of lower-income parents. The downstream effect is real: 55% of lower-income parents say they've missed their kids' activities at least sometimes in the past year because of work, compared to 40% of upper-income parents. In practice, this means evenings and weekends aren't just a preference for a large chunk of this market — they're the only realistic window, especially for lower- and middle-income households.
+
+As for what they're actually doing in that window, government survey data (NCES, parent-reported) on elementary-age kids gives a real baseline: in the past month, 53% of families attended a community, religious, or ethnic-group-sponsored event, 43% visited a library, 33% went to a play/concert/live show, 28% visited an art gallery or museum, and 27% visited a zoo or aquarium. Those numbers line up closely with exactly the categories already in the Plano-Frisco source inventory — this isn't a niche behavior, it's already the dominant way families spend this kind of time.
+
+## 3. Where They Gather Information
+
+This is where the fragmentation problem shows up as a measurable, felt experience rather than just our own hypothesis. Pew's November 2025 study on parenting communities found 34% of parents visit online spaces (forums, social media groups) where parents discuss raising kids at least monthly — rising to 42% of mothers, 45% of parents age 18-29, and 47% of parents whose oldest child is under 5. Tellingly, while 63% of those who use these spaces say it makes them feel more informed, 38% say it makes them feel more overwhelmed by everything they feel they need to track. That's a direct, independently-measured signal that the "too many scattered sources" problem isn't just our theory — a meaningful share of parents already experience information overload from exactly the kind of patchwork discovery process Open Eventz is trying to replace.
+
+Beyond online communities, the channels already cataloged in the Competitive & Channel Analysis doc apply directly here: city and library websites, local Facebook/parenting groups, Macaroni Kid-style newsletters, word of mouth, and physical flyers. A 2018 UK survey by a family-activity app called Hoop (smaller sample, dated, but directionally consistent with what shows up everywhere else) found word-of-mouth from other parents was the single biggest influence on activity choice, and that complicated booking processes or hard-to-find, outdated information actively prevented parents from following through — friction kills intent even when interest is there.
+
+## 4. Willingness to Pay vs. Free, and How Free Performs vs. Paid
+
+The clearest 2026 data point: 73% of families cite affordability as their top concern heading into the year, according to the Family Travel Association's 2025 survey — and notably, "researching free attractions to balance against paid experiences" is now an explicit, named strategy families use, not an afterthought. That's affordability functioning as an active planning behavior, not just background anxiety.
+
+At the same time, real money is already flowing toward paid, structured activities — a 2023 LendingTree survey found parents spend an average of $731 per child per year on extracurriculars, so paid options aren't being abandoned wholesale. What's shifting is the *mix*, and why people choose free isn't purely "can't afford paid." Qualitative parent feedback (from a regional parenting-events site, Kids Out and About) surfaces a structural reason free events have an edge even among families who could pay: cancellation and pre-payment friction. Parents are visibly wary of deposits they could lose if a kid gets sick or plans change last-minute, and in commuter-light suburban areas like this one, last-minute decision-making is the norm — "everything's twenty minutes away" makes spontaneity easy, but only for things with zero financial commitment attached. Free events simply carry less risk to commit to, which matters independent of whether the household can afford the paid alternative.
+
+On "how free performs vs. paid" specifically: there's no published data directly comparing fill rates or attendance between free and paid family events, so this isn't something to claim with false precision. What can be said directionally is that free events face a different conversion problem (no-shows are costless to the attendee, so low commitment may also mean low follow-through without a reminder system) while paid events face a different one (registration friction and deposit anxiety suppress sign-ups in the first place, but converted attendees are more likely to actually show). That's a real design implication: a free-activity app's biggest lever isn't payment friction, it's reminder/follow-through friction — which loops back to Dave's persona and the notification feature it already pointed toward.
+
+## 5. Economic Situation / Distribution
+
+Frisco and Plano are both well above the national median household income (roughly $80,000 nationally as of the most recent ACS data), but they're not identical. Frisco's median household income is around $150,000 (the city's own published figure is $145,444), with a poverty rate near 3.5% and 51% of households earning over $150,000 — a notably affluent population. Plano's median is lower, around $112,000, with a higher poverty rate (6.8%) and a more spread-out distribution: 37% earn over $150,000, but 10% earn under $25,000, compared to just 6% in Frisco.
+
+The practical read: the large majority of the target population in both cities has real disposable income and isn't financially forced toward free options — but a genuine minority, larger in Plano than Frisco, is meaningfully budget-constrained, which is exactly the population Roger and Lindsay's persona represents. And as Section 4 showed, the "intentional, affordability-conscious" behavior isn't confined to that lower-income minority — it shows up broadly across income levels as a 2026 cultural pattern, not just a necessity for those with less.
+
+## 6. Event Type Preferences
+
+Combining the NCES data from Section 2 with current outdoor-play trend reporting, two clear and slightly different appetites show up. First, the "enrichment" categories — library programs, museums, community/cultural events — remain consistently high-participation across income and demographic groups, and notably even more so among households valuing education, which both Plano and Frisco's affluent, highly-educated populations clearly do. Second, outdoor and unstructured play is having a real resurgence as a distinct preference, not just a fallback: industry trend reporting in 2026 describes rising demand for simple, non-electronic, low-setup outdoor play, alongside a smaller but growing countertrend toward calmer, more contemplative outdoor activities (nature exploration, quieter sensory play) as an alternative to loud, competitive group play — meaning preferences are bifurcating, not converging on one style, and a useful app should be able to filter for both moods, not just location and price.
+
+## 7. Entertainment Opportunities Sought
+
+Putting the pieces together, what this demographic is actually seeking has three overlapping but distinct flavors: enrichment-and-learning experiences (library, museum, cultural events) that affluent, education-focused families actively prioritize; social-and-community connection, both for kids (meeting other kids, per Selina's persona) and for parents themselves (meeting other parents, also explicitly named in Selina's persona and echoed in Pew's finding that parents turn to communities partly to feel "more connected"); and occasional premium, high-production experiences (family entertainment centers, immersive attractions) reserved for special occasions like birthdays rather than everyday outings. Open Eventz's lane is clearly the first two — it's not competing with the immersive-attraction, paid-celebration category at all.
+
+## 8. Latest Trends in Entertainment Preferences
+
+The single most relevant 2026 trend for this product is the active cultural pushback against screen time and over-scheduling — described across multiple sources as a "no phone summer" or digital-detox movement, with one parenting-trend report explicitly naming "raising screen-smart kids who seek real-world adventure" as the defining theme of the year. This isn't framed as deprivation; it's framed as parents intentionally choosing simpler, real-world, lower-cost experiences over heavily produced or digital ones, and reporting that they enjoy it too, not just that it's good for the kids. That's a genuinely favorable timing signal for Open Eventz: the product's whole premise (free, real-world, community-rooted activities) is riding the same cultural current as the broader trend, rather than working against parents' default instincts.
+
+## 9. Seasonality
+
+Summer is the headline season, but it's shorter than the calendar suggests and it isn't the only one. Frisco ISD's 2025-2026 school year runs from August 13, 2025 to May 22, 2026, with the next year starting August 12, 2026 — meaning the actual summer break window is about 12 weeks, not a full three calendar months. Within that window, demand is front-loaded: structured/paid camp spots (e.g., Frisco's Play Frisco camps) reportedly fill up fast once registration opens in spring, meaning a chunk of the "planned" summer activity decision happens well before summer starts, while free and drop-in events remain genuinely discoverable throughout — a real positioning angle ("the paid stuff got locked in months ago; here's what's still free and open this week").
+
+It's also worth flagging that the underlying problem — fragmented, hard-to-find information about free kid-friendly activities — isn't unique to summer. The same school calendar that creates a 12-week summer gap also creates a one-week spring break (March 9-13, 2026), a roughly two-week winter break, and a Thanksgiving week, each of which recreates the identical "what's free and happening this week" problem on a smaller scale. None of that needs to change the data architecture — it's the same sources, the same schema — but it's a legitimate option to keep in mind for the roadmap: the product doesn't have to be summer-only just because that's where it started.
+
+---
+
+## What this means for Open Eventz
+
+A few things compound nicely here. The market is large enough to matter (roughly 90-100k households with kids across two cities) but small enough to actually research by hand at pilot scale, which is exactly the tractability argument from the Data Sourcing Strategy. The population is affluent enough that "free" isn't primarily a charity play — it's riding a genuine 2026 cultural preference that cuts across income levels — while still containing a real, non-trivial budget-constrained minority the product also serves. And the information-overload problem this product exists to solve has independent survey evidence behind it (the 38% "more overwhelmed" finding), not just our own field research. The open gap is converting the macro/national context in Sections 2-4 and 6-8 into something measured directly in Plano-Frisco — worth keeping on the roadmap as a lightweight local survey once there's a real user base to ask.
+
+---
+*Feeds into: Open Eventz PM OS — recommend adding as Section 4 (Market Research), preceding the Competitive & Channel Analysis.*

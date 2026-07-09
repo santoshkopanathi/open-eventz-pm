@@ -1,0 +1,666 @@
+<title>Open Eventz — v1.1 Feature Prototype</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #2D3561; --primary-dark: #242A52; --primary-light: #F0F4FF;
+  --accent: #C4B068;
+  --bg: #F6F7F9; --card: #FFFFFF; --border: #E8EAED; --text: #1A1824;
+  --periwinkle: #7B82C2;
+  --green-bg: #D1FAE5; --green-fg: #065F46;
+  --amber-bg: #FEF3C7; --amber-fg: #92400E;
+  --blue-bg: #DBEAFE; --blue-fg: #1E40AF;
+  --red-bg: #FEE2E2; --red-fg: #991B1B;
+  /* Plano accent — muted blue */
+  --plano: #3B82F6; --plano-light: #EFF6FF;
+}
+html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* HEADER */
+.header { flex-shrink: 0; background: var(--primary); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-text { color: #fff; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
+.logo-sub  { color: rgba(255,255,255,0.55); font-size: 11px; }
+.map-btn { margin-left: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.map-btn.active { background: var(--accent); color: var(--primary); font-weight: 700; border-color: var(--accent); }
+
+/* CITY TABS */
+.city-tabs { flex-shrink: 0; background: var(--primary-dark); display: flex; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.city-tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.45); border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.15s; user-select: none; }
+.city-tab:hover { color: rgba(255,255,255,0.75); }
+.city-tab.active-frisco { color: var(--accent); border-bottom-color: var(--accent); }
+.city-tab.active-plano  { color: var(--plano); border-bottom-color: var(--plano); }
+
+/* FILTER BAR */
+.filter-bar { flex-shrink: 0; background: var(--card); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border-left: 3px solid transparent; }
+.filter-bar.fb-frisco { border-left-color: var(--accent); }
+.filter-bar.fb-plano  { border-left-color: var(--plano); }
+
+/* PILL DROPDOWN — matches real app source dropdown style */
+.dd-wrap { position: relative; }
+.dd-pill { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all .12s; }
+.dd-pill:hover { border-color: var(--primary); }
+.dd-pill.active-frisco { border-color: var(--accent); background: #FEF9E7; color: #7A5F1A; }
+.dd-pill.active-plano  { border-color: var(--plano); background: var(--plano-light); color: #1D4ED8; }
+.dd-pill .caret { color: #aaa; font-size: 10px; }
+.dd-pill .pill-badge { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 20px; }
+.fb-frisco .dd-pill .pill-badge { background: var(--accent); color: #fff; }
+.fb-plano  .dd-pill .pill-badge { background: var(--plano); color: #fff; }
+.dd-menu { display: none; position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 4px 0; min-width: 200px; z-index: 500; }
+.dd-menu.open { display: block; }
+.dd-item { display: flex; align-items: center; gap: 12px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--text); }
+.dd-item:hover { background: var(--bg); }
+.dd-item input[type=checkbox] { width: 15px; height: 15px; }
+.fb-frisco .dd-item input[type=checkbox] { accent-color: var(--primary); }
+.fb-plano  .dd-item input[type=checkbox] { accent-color: var(--plano); }
+.dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.date-row { display: flex; align-items: center; gap: 8px; color: #888; font-size: 13px; }
+.date-input { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 5px 8px; font-size: 12px; outline: none; }
+.clear-link { font-size: 11px; color: var(--periwinkle); text-decoration: underline; cursor: pointer; }
+
+/* CONTENT */
+.content { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.list-panel { flex: 0 0 480px; min-height: 0; overflow-y: auto; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.list-header { padding: 12px 16px 4px; font-size: 12px; color: #999; }
+.events-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* EVENT CARD */
+.event-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--card); cursor: pointer; text-align: left; transition: box-shadow .15s, border-color .15s; display: flex; gap: 12px; align-items: flex-start; width: 100%; }
+.event-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.event-card.selected { border: 2px solid var(--primary); background: var(--primary-light); }
+.date-stamp { flex-shrink: 0; width: 44px; height: 44px; border-radius: 10px; background: var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }
+.date-stamp .month { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; line-height: 1; }
+.date-stamp .day   { font-size: 20px; font-weight: 700; line-height: 1.1; }
+.card-body { flex: 1; min-width: 0; }
+.card-title { font-size: 13px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-meta { margin-top: 4px; font-size: 11px; color: #888; }
+.card-time { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.card-location { margin-top: 3px; font-size: 11px; color: #999; }
+.badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.badge-free      { background: var(--green-bg); color: var(--green-fg); }
+.badge-paid      { background: var(--amber-bg); color: var(--amber-fg); }
+.badge-reg       { background: var(--amber-bg); color: var(--amber-fg); }
+.badge-rec       { background: #EDE9FE; color: #5B21B6; }
+.badge-age       { background: #FEF9C3; color: #854D0E; }
+.badge-age-inf   { background: var(--blue-bg); color: var(--blue-fg); cursor: help; position: relative; }
+.badge-age-inf::after { content: attr(data-tip); display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1A1824; color: #fff; font-size: 10px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; z-index: 999; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.badge-age-inf:hover::after { display: block; }
+
+/* WELCOME */
+.welcome-panel { flex: 1; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(150deg,#E8E6F5 0%,#F5E6EF 40%,#FFF3E0 100%); position: relative; overflow: hidden; }
+.welcome-panel .bg-emoji { position: absolute; pointer-events: none; opacity: .4; }
+.welcome-content { position: relative; z-index: 1; text-align: center; padding: 32px; }
+.welcome-balloon  { font-size: 64px; margin-bottom: 16px; }
+.welcome-headline { font-size: 36px; font-weight: 800; color: #2D3561; line-height: 1.15; letter-spacing: -.5px; margin-bottom: 12px; }
+.welcome-sub      { font-size: 14px; color: #5A5868; line-height: 1.65; max-width: 340px; margin: 0 auto 24px; }
+.source-pills     { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.source-pill      { background: rgba(45,53,97,.1); color: #2D3561; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+
+/* DETAIL */
+.detail-panel { flex: 1; min-height: 0; min-width: 0; border-left: 1px solid var(--border); background: var(--card); overflow-y: auto; }
+.detail-inner { padding: 20px; }
+.detail-title-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px; }
+.detail-title { font-size: 17px; font-weight: 700; line-height: 1.3; }
+.close-btn { color: #bbb; font-size: 20px; cursor: pointer; background: none; border: none; flex-shrink: 0; }
+.close-btn:hover { color: #666; }
+.detail-meta { font-size: 13px; color: #666; margin-bottom: 10px; }
+.price-tag { display: inline-block; font-size: 13px; padding: 4px 12px; border-radius: 999px; font-weight: 600; margin-bottom: 14px; }
+.reg-banner { background: var(--amber-bg); color: var(--amber-fg); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.sup-badge { border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 600; margin-bottom: 14px; }
+.age-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.description { font-size: 13px; color: #555; line-height: 1.65; margin-bottom: 18px; }
+.action-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.btn-primary { display: block; width: 100%; text-align: center; background: var(--primary); color: #fff; border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; }
+.btn-outline { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-outline:hover { background: var(--bg); }
+.social-row { display: flex; align-items: center; gap: 14px; }
+.social-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--periwinkle); background: none; border: none; cursor: pointer; opacity: .75; }
+.social-btn:hover { opacity: 1; }
+.social-btn.liked { color: var(--green-fg); opacity: 1; }
+
+/* MAP */
+.map-panel { flex: 1; min-height: 0; border-left: 1px solid var(--border); background: #e8edf4; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #8a9ab5; font-size: 14px; position: relative; }
+.map-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,0,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px); background-size: 40px 40px; }
+.map-pin { position: absolute; font-size: 24px; transform: translate(-50%,-100%); filter: drop-shadow(0 2px 4px rgba(0,0,0,.2)); }
+
+/* STATES */
+.state-center { display: flex; align-items: center; justify-content: center; height: 200px; }
+.state-block { text-align: center; }
+.state-block .icon { font-size: 36px; margin-bottom: 10px; }
+.state-block p { color: #999; font-size: 13px; }
+
+/* MOBILE */
+.mobile-overlay { display: none; position: fixed; inset: 0; z-index: 60; background: var(--card); flex-direction: column; }
+.mobile-overlay.open { display: flex; }
+.mobile-hdr { flex-shrink: 0; background: var(--primary); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+.back-btn { margin-left: auto; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.9); border-radius: 8px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+@media (max-width:800px) { .list-panel { flex: 1; } .welcome-panel,.detail-panel,.map-panel { display: none; } }
+@media (min-width:801px) { .mobile-overlay { display: none !important; } }
+</style>
+
+<div class="shell">
+  <header class="header">
+    <div class="logo">
+      <span style="font-size:26px">🎈</span>
+      <div><div class="logo-text">Open Eventz</div><div class="logo-sub">Free kids events in Frisco &amp; Plano, TX</div></div>
+    </div>
+    <button class="map-btn" id="mapBtn" onclick="toggleMap()">🗺️ Map Off</button>
+  </header>
+
+  <div class="city-tabs">
+    <div class="city-tab active-frisco" id="tab-frisco" onclick="switchCity('frisco')">🏙 Frisco City</div>
+    <div class="city-tab" id="tab-plano" onclick="switchCity('plano')">🏛 Plano City</div>
+  </div>
+
+  <div class="filter-bar fb-frisco" id="filterBar">
+    <!-- Source dropdown -->
+    <div class="dd-wrap" id="srcWrap">
+      <button class="dd-pill" id="srcBtn" onclick="openDD('src',event)">
+        <span id="srcLabel">All sources</span>
+        <span class="pill-badge" id="srcBadge" style="display:none"></span>
+        <span class="caret">▼</span>
+      </button>
+      <div class="dd-menu" id="srcMenu"></div>
+    </div>
+    <!-- Age dropdown -->
+    <div class="dd-wrap" id="ageWrap">
+      <button class="dd-pill" id="ageBtn" onclick="openDD('age',event)">
+        <span id="ageLabel">Age range</span>
+        <span class="pill-badge" id="ageBadge" style="display:none"></span>
+        <span class="caret">▼</span>
+      </button>
+      <div class="dd-menu" id="ageMenu">
+        <label class="dd-item"><input type="checkbox" value="0" onchange="toggleAge(this)"> Toddlers (0–5)</label>
+        <label class="dd-item"><input type="checkbox" value="1" onchange="toggleAge(this)"> Kids (6–12)</label>
+        <label class="dd-item"><input type="checkbox" value="2" onchange="toggleAge(this)"> Teens</label>
+      </div>
+    </div>
+    <div class="date-row">
+      <span>From</span>
+      <input type="date" class="date-input" id="dateFrom" onchange="applyDates()">
+      <span>to</span>
+      <input type="date" class="date-input" id="dateTo" onchange="applyDates()">
+    </div>
+    <span class="clear-link" id="clearLink" style="display:none" onclick="clearFilters()">Clear filters</span>
+  </div>
+
+  <div class="content">
+    <div class="list-panel">
+      <div class="list-header" id="listHdr"></div>
+      <div class="events-list" id="eventsList"></div>
+    </div>
+    <div class="welcome-panel" id="welcomePanel">
+      <span class="bg-emoji" style="top:8%;left:6%;font-size:2rem">🎨</span>
+      <span class="bg-emoji" style="top:12%;right:10%;font-size:1.8rem">🔬</span>
+      <span class="bg-emoji" style="top:25%;left:3%;font-size:1.6rem">📚</span>
+      <span class="bg-emoji" style="top:20%;right:4%;font-size:1.8rem">⚽</span>
+      <span class="bg-emoji" style="bottom:30%;left:4%;font-size:1.6rem">🎵</span>
+      <span class="bg-emoji" style="bottom:20%;right:6%;font-size:1.8rem">🌳</span>
+      <div class="welcome-content">
+        <div class="welcome-balloon">🎈</div>
+        <div class="welcome-headline" id="welcomeH">Free events<br>in Frisco</div>
+        <p class="welcome-sub" id="welcomeS">Events from Frisco Public Library and Play Frisco — all in one place.</p>
+        <div class="source-pills" id="welcomePills">
+          <span class="source-pill">📚 Frisco Library</span>
+          <span class="source-pill">🌳 Play Frisco</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-panel" id="detailPanel" style="display:none"></div>
+    <div class="map-panel" id="mapPanel" style="display:none">
+      <div class="map-grid"></div>
+      <div style="position:relative;z-index:1;text-align:center">
+        <div style="font-size:48px;opacity:.5">🗺️</div>
+        <div style="font-weight:600;font-size:15px;color:#4a5568;margin-bottom:4px">Venue Map</div>
+        <div style="font-size:12px">All event locations displayed as pins</div>
+      </div>
+      <div class="map-pin" style="top:35%;left:38%">📍</div>
+      <div class="map-pin" style="top:50%;left:58%">📍</div>
+      <div class="map-pin" style="top:28%;left:65%">📍</div>
+    </div>
+  </div>
+
+  <div class="mobile-overlay" id="mobileOverlay">
+    <div class="mobile-hdr">
+      <span style="font-size:22px">🎈</span>
+      <div class="logo-text" style="font-size:18px;color:#fff">Open Eventz</div>
+      <button class="back-btn" onclick="closeMobile()">‹ Back</button>
+    </div>
+    <div style="flex:1;overflow-y:auto" id="mobileDetail"></div>
+  </div>
+</div>
+
+<script>
+const EVENTS = [
+  // FRISCO LIBRARY
+  {id:'fl-1',city:'frisco',src:'frisco-library',srcLabel:'Frisco Library',title:'Toddler Storytime',emoji:'📚',
+   start:'2026-07-12T10:00:00',end:'2026-07-12T10:45:00',loc:'Frisco Public Library, Frisco',addr:'6101 Frisco Square Blvd, Frisco TX',
+   free:true,reg:false,recurring:true,ageMin:0,ageMax:5,ageLabel:'Children (0–5)',ageInf:false,
+   desc:'Stories, songs, and a simple craft for our youngest learners. Perfect for toddlers and their grown-ups. Drop in — no registration needed.'},
+  {id:'fl-2',city:'frisco',src:'frisco-library',srcLabel:'Frisco Library',title:'LEGO Building Club — Space Edition',emoji:'🔬',
+   start:'2026-07-14T15:00:00',end:'2026-07-14T16:30:00',loc:'Frisco Public Library, Frisco',addr:'6101 Frisco Square Blvd, Frisco TX',
+   free:true,reg:true,recurring:false,ageMin:6,ageMax:12,ageLabel:'Children (6–12)',ageInf:false,
+   desc:'Build rockets, rovers, and space stations! All supplies provided. Space is limited — first come, first seated.'},
+  {id:'fl-3',city:'frisco',src:'frisco-library',srcLabel:'Frisco Library',title:'Teen Art Workshop: Watercolors',emoji:'🎨',
+   start:'2026-07-15T16:00:00',end:'2026-07-15T17:30:00',loc:'Frisco Public Library, Frisco',addr:'6101 Frisco Square Blvd, Frisco TX',
+   free:true,reg:true,recurring:false,ageMin:13,ageMax:17,ageLabel:'Teens',ageInf:false,
+   desc:'Watercolor techniques for teens. Experiment with color blending and take your finished piece home.'},
+  {id:'fl-4',city:'frisco',src:'frisco-library',srcLabel:'Frisco Library',title:'Family Movie Night',emoji:'🎉',
+   start:'2026-07-18T19:00:00',end:'2026-07-18T21:00:00',loc:'Frisco Public Library — Meeting Room',addr:'6101 Frisco Square Blvd, Frisco TX',
+   free:true,reg:false,recurring:false,ageMin:0,ageMax:17,ageLabel:null,ageInf:false,
+   desc:'Bring the whole family for a movie screening. Popcorn provided! Movie is rated PG.'},
+  // PLAY FRISCO — LLM inferred age
+  {id:'pf-1',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Summer Splash Bash',emoji:'🌳',
+   start:'2026-07-12T11:00:00',end:'2026-07-12T15:00:00',loc:'Frisco Commons Park',addr:'9055 Research Rd, Frisco TX',
+   free:true,reg:false,recurring:false,ageMin:null,ageMax:null,ageLabel:'Family',ageInf:true,ageConf:'high',ageBuckets:['family'],
+   desc:'A free outdoor community event with water activities, live music, food trucks, and family-friendly games. Open to all ages.'},
+  {id:'pf-2',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Walnut Wednesdays',emoji:'🌿',
+   start:'2026-07-15T10:00:00',end:'2026-07-15T11:00:00',loc:'Frisco Commons Park',addr:'9055 Research Rd, Frisco TX',
+   free:true,reg:false,recurring:true,ageMin:null,ageMax:null,ageLabel:'Ages 0–12',ageInf:true,ageConf:'high',ageBuckets:['toddler','kids','family'],
+   desc:'Families can drop by for playful, nature-based learning activities. Explore the outdoors with little ones each Wednesday morning.'},
+  {id:'pf-3',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Youth Soccer Camp',emoji:'⚽',
+   start:'2026-07-21T09:00:00',end:'2026-07-25T12:00:00',loc:'Toyota Stadium Training Fields',addr:'9200 World Cup Way, Frisco TX',
+   free:false,priceText:'$95/week',reg:true,recurring:false,ageMin:null,ageMax:null,ageLabel:'Ages 6–12',ageInf:true,ageConf:'medium',ageBuckets:['kids'],
+   desc:'Five-day soccer camp with professional coaching. Focus on fundamentals, teamwork, and fun. All skill levels welcome.'},
+  {id:'pf-4',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Play For All Sensory Swim',emoji:'🏊',
+   start:'2026-07-19T09:00:00',end:'2026-07-19T10:30:00',loc:'Frisco Athletic Center Pool',addr:'5828 Rolater Rd, Frisco TX',
+   free:true,reg:true,recurring:false,ageMin:null,ageMax:null,ageLabel:'Family',ageInf:true,ageConf:'high',ageBuckets:['family'],
+   desc:'An inclusive swim session designed for individuals with sensory sensitivities and their families. Reduced noise and dimmed lighting for a welcoming environment.'},
+  // PLAY FRISCO — kid_relevant: false (should NEVER appear in any view)
+  {id:'pf-adult-1',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Adult Fitness Boot Camp',emoji:'💪',
+   start:'2026-07-14T06:00:00',end:'2026-07-14T07:00:00',loc:'Frisco Athletic Center',addr:'5828 Rolater Rd, Frisco TX',
+   free:false,priceText:'$20',reg:true,recurring:true,ageMin:null,ageMax:null,ageLabel:null,ageInf:true,ageConf:'high',ageBuckets:[],kidRelevant:false,
+   desc:'High-intensity interval training for adults. Not suitable for children.'},
+  {id:'pf-adult-2',city:'frisco',src:'play-frisco',srcLabel:'Play Frisco',title:'Senior Pickleball League',emoji:'🏓',
+   start:'2026-07-16T08:00:00',end:'2026-07-16T10:00:00',loc:'Frisco Commons Park Courts',addr:'9055 Research Rd, Frisco TX',
+   free:true,reg:true,recurring:true,ageMin:null,ageMax:null,ageLabel:null,ageInf:true,ageConf:'high',ageBuckets:[],kidRelevant:false,
+   desc:'Weekly pickleball for adults 55+. Competitive and social divisions available.'},
+  // PLANO LIBRARIES
+  {id:'pl-1',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'harrington',title:'Baby Rhyme Time',emoji:'📚',
+   start:'2026-07-11T09:30:00',end:'2026-07-11T10:00:00',loc:'Harrington Library — Plano',addr:'1501 18th St, Plano TX',
+   free:true,reg:false,recurring:true,ageMin:0,ageMax:1,ageLabel:'Babies',ageInf:false,
+   desc:'Songs, rhymes, and gentle movement for babies 0–18 months and their caregivers. Builds early literacy in a welcoming, low-key environment.'},
+  {id:'pl-2',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'haggard',title:'Preschool Storytime',emoji:'📚',
+   start:'2026-07-11T10:30:00',end:'2026-07-11T11:00:00',loc:'Haggard Library — Plano',addr:'2501 Coit Rd, Plano TX',
+   free:true,reg:false,recurring:true,ageMin:3,ageMax:5,ageLabel:'Preschoolers',ageInf:false,
+   desc:'Interactive storytime for preschoolers featuring read-alouds, fingerplays, and a simple craft.'},
+  {id:'pl-3',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'schimelpfenig',title:'Kids Coding: Scratch Basics',emoji:'🔬',
+   start:'2026-07-16T14:00:00',end:'2026-07-16T15:30:00',loc:'Schimelpfenig Library — Plano',addr:'5024 Custer Rd, Plano TX',
+   free:true,reg:true,recurring:false,ageMin:6,ageMax:12,ageLabel:'Kids (6–12)',ageInf:false,
+   desc:'Introduction to visual programming with Scratch. Kids will create their first interactive animation. No prior coding experience needed.'},
+  {id:'pl-4',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'haggard',title:'Teen Gaming Tournament',emoji:'🎮',
+   start:'2026-07-19T14:00:00',end:'2026-07-19T17:00:00',loc:'Haggard Library — Plano',addr:'2501 Coit Rd, Plano TX',
+   free:true,reg:true,recurring:false,ageMin:13,ageMax:17,ageLabel:'Teens',ageInf:false,
+   desc:'Multiplayer gaming event for teens. Bring your competitive spirit! Prizes for top finishers.'},
+  {id:'pl-5',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'davis',title:'Family LEGO Build Night',emoji:'🧱',
+   start:'2026-07-17T17:30:00',end:'2026-07-17T19:00:00',loc:'Davis Library — Plano',addr:'7501 Independence Pkwy, Plano TX',
+   free:true,reg:false,recurring:true,ageMin:0,ageMax:17,ageLabel:'All Ages',ageInf:false,
+   desc:'Drop in for a family LEGO build session. All bricks provided. Builds displayed in the library all week.'},
+  {id:'pl-6',city:'plano',src:'plano-library',srcLabel:'Plano Libraries',branch:'harrington',title:'Saturday Science Lab',emoji:'🧪',
+   start:'2026-07-12T11:00:00',end:'2026-07-12T12:30:00',loc:'Harrington Library — Plano',addr:'1501 18th St, Plano TX',
+   free:true,reg:false,recurring:true,ageMin:6,ageMax:12,ageLabel:'Kids (6–12)',ageInf:false,
+   desc:'Hands-on science experiments each week. This week: chemical reactions. All materials provided.'},
+];
+
+const AGE_CHIPS = [
+  {label:'Toddlers (0–5)',min:0,max:5,bucket:'toddler'},
+  {label:'Kids (6–12)',  min:6,max:12,bucket:'kids'},
+  {label:'Teens',       min:13,max:17,bucket:'teen'},
+];
+const FRISCO_SOURCES = [{v:'frisco-library',l:'Frisco Library'},{v:'play-frisco',l:'Play Frisco'}];
+const PLANO_BRANCHES = [
+  {v:'harrington',l:'Harrington Library'},{v:'haggard',l:'Haggard Library'},
+  {v:'schimelpfenig',l:'Schimelpfenig Library'},{v:'davis',l:'Davis Library'},{v:'memorial',l:'Memorial Library'}
+];
+
+// Per-city state
+let state = {
+  city: 'frisco',
+  filters: {
+    frisco: {sources:[], ages:[], dateFrom:'', dateTo:''},
+    plano:  {branches:[], ages:[], dateFrom:'', dateTo:''},
+  },
+  selected: null, mapOn: false, likedIds: new Set(),
+};
+function cf(){ return state.filters[state.city]; }
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  ['srcWrap','ageWrap'].forEach(id => {
+    const w = document.getElementById(id);
+    if (w && !w.contains(e.target)) {
+      w.querySelector('.dd-menu')?.classList.remove('open');
+    }
+  });
+});
+
+function openDD(which, e) {
+  e.stopPropagation();
+  const menuId = which==='src' ? 'srcMenu' : 'ageMenu';
+  const menu = document.getElementById(menuId);
+  const btn  = document.getElementById(which==='src' ? 'srcBtn' : 'ageBtn');
+  const isOpen = menu.classList.contains('open');
+  // close all
+  document.querySelectorAll('.dd-menu').forEach(m => m.classList.remove('open'));
+  if (!isOpen) {
+    if (which === 'src') buildSrcMenu();
+    const r = btn.getBoundingClientRect();
+    menu.style.top  = (r.bottom + 4) + 'px';
+    menu.style.left = r.left + 'px';
+    menu.classList.add('open');
+  }
+}
+
+function buildSrcMenu() {
+  const menu = document.getElementById('srcMenu');
+  const f = cf();
+  const items = state.city === 'frisco' ? FRISCO_SOURCES : PLANO_BRANCHES;
+  const selected = state.city === 'frisco' ? f.sources : f.branches;
+  menu.innerHTML = items.map(it =>
+    `<label class="dd-item"><input type="checkbox" value="${it.v}" ${selected.includes(it.v)?'checked':''} onchange="toggleSrc(this)"> ${it.l}</label>`
+  ).join('');
+}
+
+function toggleSrc(cb) {
+  const f = cf();
+  const arr = state.city === 'frisco' ? f.sources : f.branches;
+  if (cb.checked) { if (!arr.includes(cb.value)) arr.push(cb.value); }
+  else { const i = arr.indexOf(cb.value); if (i>-1) arr.splice(i,1); }
+  updateDDs(); render();
+}
+
+function toggleAge(cb) {
+  const f = cf();
+  const idx = parseInt(cb.value);
+  if (cb.checked) { if (!f.ages.includes(idx)) f.ages.push(idx); }
+  else { f.ages = f.ages.filter(a => a !== idx); }
+  updateDDs(); render();
+}
+
+function applyDates() {
+  const f = cf();
+  f.dateFrom = document.getElementById('dateFrom').value;
+  f.dateTo   = document.getElementById('dateTo').value;
+  render();
+}
+
+function updateDDs() {
+  const f = cf();
+  const isFrisco = state.city === 'frisco';
+  const srcArr = isFrisco ? f.sources : f.branches;
+  const srcBtn = document.getElementById('srcBtn');
+  const srcLabel = document.getElementById('srcLabel');
+  const srcBadge = document.getElementById('srcBadge');
+  if (srcArr.length === 0) {
+    srcBtn.className = 'dd-pill';
+    srcLabel.textContent = isFrisco ? 'All sources' : 'All branches';
+    srcBadge.style.display = 'none';
+  } else if (srcArr.length === 1) {
+    srcBtn.className = 'dd-pill active-' + state.city;
+    const map = Object.fromEntries([...FRISCO_SOURCES,...PLANO_BRANCHES].map(x=>[x.v,x.l]));
+    srcLabel.textContent = map[srcArr[0]] || srcArr[0];
+    srcBadge.style.display = 'none';
+  } else {
+    srcBtn.className = 'dd-pill active-' + state.city;
+    srcLabel.textContent = isFrisco ? 'Sources' : 'Branches';
+    srcBadge.textContent = srcArr.length; srcBadge.style.display = 'inline-block';
+  }
+
+  const ageBtn = document.getElementById('ageBtn');
+  const ageLabel = document.getElementById('ageLabel');
+  const ageBadge = document.getElementById('ageBadge');
+  if (f.ages.length === 0) {
+    ageBtn.className = 'dd-pill';
+    ageLabel.textContent = 'Age range';
+    ageBadge.style.display = 'none';
+  } else if (f.ages.length === 1) {
+    ageBtn.className = 'dd-pill active-' + state.city;
+    ageLabel.textContent = AGE_CHIPS[f.ages[0]].label;
+    ageBadge.style.display = 'none';
+  } else {
+    ageBtn.className = 'dd-pill active-' + state.city;
+    ageLabel.textContent = 'Age range';
+    ageBadge.textContent = f.ages.length; ageBadge.style.display = 'inline-block';
+  }
+
+  const hasFilters = srcArr.length>0 || f.ages.length>0 || f.dateFrom || f.dateTo;
+  document.getElementById('clearLink').style.display = hasFilters ? 'inline' : 'none';
+}
+
+// Sync age checkboxes to per-city state when switching
+function syncAgeCheckboxes() {
+  const f = cf();
+  document.querySelectorAll('#ageMenu input[type=checkbox]').forEach(cb => {
+    cb.checked = f.ages.includes(parseInt(cb.value));
+  });
+}
+
+function switchCity(city) {
+  if (state.city === city) return;
+  state.city = city;
+  state.selected = null;
+  // Tab styling
+  document.getElementById('tab-frisco').className = 'city-tab' + (city==='frisco' ? ' active-frisco' : '');
+  document.getElementById('tab-plano').className  = 'city-tab' + (city==='plano'  ? ' active-plano'  : '');
+  // Filter bar city tint
+  document.getElementById('filterBar').className = 'filter-bar fb-' + city;
+  // Restore date inputs
+  const f = cf();
+  document.getElementById('dateFrom').value = f.dateFrom;
+  document.getElementById('dateTo').value   = f.dateTo;
+  // Sync age checkboxes to this city's state
+  syncAgeCheckboxes();
+  // Welcome copy
+  if (city === 'frisco') {
+    document.getElementById('welcomeH').innerHTML = 'Free events<br>in Frisco';
+    document.getElementById('welcomeS').textContent = 'Events from Frisco Public Library and Play Frisco — all in one place.';
+    document.getElementById('welcomePills').innerHTML = '<span class="source-pill">📚 Frisco Library</span><span class="source-pill">🌳 Play Frisco</span>';
+  } else {
+    document.getElementById('welcomeH').innerHTML = 'Free events<br>in Plano';
+    document.getElementById('welcomeS').textContent = 'Events across all five Plano Libraries branches — all in one place.';
+    document.getElementById('welcomePills').innerHTML = '<span class="source-pill">🏛 Harrington</span><span class="source-pill">🏛 Haggard</span><span class="source-pill">🏛 Schimelpfenig</span><span class="source-pill">🏛 Davis</span>';
+  }
+  updateDDs(); render();
+}
+
+function clearFilters() {
+  const f = cf();
+  if (state.city === 'frisco') f.sources = []; else f.branches = [];
+  f.ages = []; f.dateFrom = ''; f.dateTo = '';
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value   = '';
+  document.querySelectorAll('#ageMenu input[type=checkbox]').forEach(c => c.checked = false);
+  updateDDs(); render();
+}
+
+function toggleMap() { state.mapOn = !state.mapOn; render(); }
+function closeMobile() { state.selected = null; document.getElementById('mobileOverlay').classList.remove('open'); }
+
+function selectEvent(ev) {
+  state.selected = (state.selected?.id === ev.id) ? null : ev;
+  render();
+  if (window.innerWidth <= 800 && state.selected) {
+    document.getElementById('mobileDetail').innerHTML = buildDetail(state.selected);
+    document.getElementById('mobileOverlay').classList.add('open');
+  }
+}
+function toggleLike(id) {
+  if (state.likedIds.has(id)) state.likedIds.delete(id); else state.likedIds.add(id);
+  if (state.selected?.id === id) document.getElementById('detailPanel').innerHTML = buildDetail(state.selected);
+}
+
+// FILTER LOGIC
+function filteredEvents() {
+  const f = cf();
+  // Hard gate: exclude Play Frisco events the LLM flagged as not kid-relevant
+  let list = EVENTS.filter(e => e.city === state.city && e.kidRelevant !== false);
+
+  // Source / branch
+  if (state.city === 'frisco' && f.sources.length > 0)
+    list = list.filter(e => f.sources.includes(e.src));
+  if (state.city === 'plano' && f.branches.length > 0)
+    list = list.filter(e => f.branches.some(b => (e.branch||'').includes(b)));
+
+  // Age — family events (ageMin null + inferred family bucket) appear under all age selections
+  if (f.ages.length > 0) {
+    list = list.filter(e => {
+      // Family inferred — always show
+      if (e.ageInf && e.ageBuckets && e.ageBuckets.includes('family')) return true;
+      // All ages structured — always show
+      if (e.ageMin === 0 && e.ageMax === 17) return true;
+      // No age data and not inferred — hide under age filter
+      if (e.ageMin === null) return false;
+      // Check overlap with any selected chip
+      return f.ages.some(i => {
+        const chip = AGE_CHIPS[i];
+        // Also check inferred buckets for Play Frisco
+        if (e.ageInf && e.ageBuckets) return e.ageBuckets.includes(chip.bucket);
+        return e.ageMin <= chip.max && e.ageMax >= chip.min;
+      });
+    });
+  }
+  return list;
+}
+
+// FORMAT HELPERS
+function fmtMon(iso){ return new Date(iso).toLocaleDateString('en-US',{month:'short',timeZone:'America/Chicago'}); }
+function fmtDay(iso){ return new Date(iso).toLocaleDateString('en-US',{day:'numeric',timeZone:'America/Chicago'}); }
+function fmtTime(iso){ return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Chicago'}); }
+function fmtFull(iso){ return new Date(iso).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/Chicago'}); }
+function isMulti(s,e){ return s&&e&&new Date(s).toLocaleDateString()!==new Date(e).toLocaleDateString(); }
+
+// BUILD CARD
+function buildCard(ev) {
+  const sel = state.selected?.id === ev.id;
+  const multi = isMulti(ev.start, ev.end);
+  const timeStr = multi
+    ? `📅 ${fmtMon(ev.start)} ${fmtDay(ev.start)} – ${fmtMon(ev.end)} ${fmtDay(ev.end)}`
+    : `🕐 ${fmtTime(ev.start)}${ev.end?' – '+fmtTime(ev.end):''}`;
+
+  let badges = '';
+  if (ev.recurring) badges += `<span class="badge badge-rec">↻ Recurring</span>`;
+  if (ev.reg)       badges += `<span class="badge badge-reg">📋 Reg.</span>`;
+  if (ev.free)      badges += `<span class="badge badge-free">Free</span>`;
+  else if (ev.priceText) badges += `<span class="badge badge-paid">Paid</span>`;
+  if (ev.ageLabel) {
+    if (ev.ageInf) {
+      const tip = ev.ageConf==='high'
+        ? 'Age estimated from event description (high confidence)'
+        : 'Age estimated from event description (medium confidence)';
+      badges += `<span class="badge badge-age-inf" data-tip="${tip}">~ ${ev.ageLabel} ✦</span>`;
+    } else {
+      badges += `<span class="badge badge-age">${ev.ageLabel}</span>`;
+    }
+  }
+
+  return `<button class="event-card ${sel?'selected':''}" onclick="selectEvent(EVENTS.find(e=>e.id==='${ev.id}'))">
+    <div class="date-stamp"><span class="month">${fmtMon(ev.start)}</span><span class="day">${fmtDay(ev.start)}</span></div>
+    <div class="card-body">
+      <div class="card-title">${ev.emoji} ${ev.title}</div>
+      <div class="card-meta">
+        <div class="card-time"><span>${timeStr}</span></div>
+        ${ev.loc?`<div class="card-location">📍 ${ev.loc}</div>`:''}
+        <div class="badges">${badges}</div>
+      </div>
+    </div>
+  </button>`;
+}
+
+// BUILD DETAIL
+function buildDetail(ev) {
+  const liked = state.likedIds.has(ev.id);
+  // Supervision (Frisco Library only)
+  let supHTML = '';
+  if (ev.src === 'frisco-library') {
+    let bg,fg,label;
+    if (ev.ageMin !== null && ev.ageMin >= 13)    { bg='var(--green-bg)';fg='var(--green-fg)';label='✅ Can kids be dropped off? Yes — teens 13+ may attend alone'; }
+    else if (ev.ageMax !== null && ev.ageMax <= 9){ bg='var(--red-bg)'; fg='var(--red-fg)'; label='❌ Can kids be dropped off? No — adult must stay with child'; }
+    else if (ev.ageMin !== null)                  { bg='var(--blue-bg)';fg='var(--blue-fg)';label='🔵 Can kids be dropped off? Only if child is 10 or older (Frisco Library policy)'; }
+    else                                          { bg='#F3F4F6';       fg='#374151';       label='⚠️ Can kids be dropped off? Check with Frisco Library'; }
+    supHTML = `<div class="sup-badge" style="background:${bg};color:${fg}">${label}</div>`;
+  }
+  const priceTag = ev.free
+    ? `<span class="price-tag" style="background:var(--green-bg);color:var(--green-fg)">Free admission</span>`
+    : ev.priceText ? `<span class="price-tag" style="background:var(--amber-bg);color:var(--amber-fg)">${ev.priceText}</span>` : '';
+  const regBanner = ev.reg ? `<div class="reg-banner">📋 Registration required — sign up before attending</div>` : '';
+
+  // Age — structured vs inferred
+  let ageHTML = '';
+  if (ev.ageLabel && !ev.ageInf) {
+    ageHTML = `<div class="age-row"><span style="font-size:13px;color:var(--periwinkle)">👶 Suitable for: ${ev.ageLabel}</span></div>`;
+  } else if (ev.ageInf && ev.ageLabel) {
+    ageHTML = `<div class="age-row">
+      <span class="badge badge-age-inf" style="font-size:11px;padding:3px 9px;">~ ${ev.ageLabel} ✦</span>
+      <span style="font-size:11px;color:var(--blue-fg);">Estimated from event description · not confirmed by source</span>
+    </div>`;
+  }
+
+  const multi = isMulti(ev.start, ev.end);
+  const dateStr = multi
+    ? `📅 ${fmtMon(ev.start)} ${fmtDay(ev.start)} – ${fmtMon(ev.end)} ${fmtDay(ev.end)} · All day`
+    : `📅 ${fmtFull(ev.start)} at ${fmtTime(ev.start)}${ev.end?' – '+fmtTime(ev.end):''}`;
+
+  return `<div class="detail-inner">
+    <div class="detail-title-row">
+      <div class="detail-title">${ev.title}</div>
+      <button class="close-btn" onclick="state.selected=null;render()">✕</button>
+    </div>
+    <div class="detail-meta">${dateStr}</div>
+    ${ev.loc?`<div class="detail-meta">📍 ${ev.loc}${ev.addr?`<span style="display:block;color:#aaa;font-size:11px;margin-left:18px">${ev.addr}</span>`:''}</div>`:''}
+    ${priceTag?`<div style="margin-bottom:14px">${priceTag}</div>`:''}
+    ${regBanner}${supHTML}${ageHTML}
+    ${ev.desc?`<div class="description">${ev.desc}</div>`:''}
+    <div class="action-list">
+      <a href="#" class="btn-primary">View event details →</a>
+      <button class="btn-outline">📅 Add to Google Calendar</button>
+      <button class="btn-outline">🍎 Add to Apple Calendar</button>
+      <button class="btn-outline">🗺️ Get directions</button>
+    </div>
+    <div class="social-row">
+      <button class="social-btn ${liked?'liked':''}" onclick="toggleLike('${ev.id}')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="${liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+        ${liked?'Attending':'Attending?'} · ${liked?1:0}
+      </button>
+      <button class="social-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+    </div>
+  </div>`;
+}
+
+// MAIN RENDER
+function render() {
+  const list = filteredEvents();
+  document.getElementById('listHdr').textContent =
+    list.length ? `${list.length} upcoming event${list.length!==1?'s':''}` : '';
+  const el = document.getElementById('eventsList');
+  el.innerHTML = list.length === 0
+    ? `<div class="state-center"><div class="state-block"><div class="icon">📭</div><p>No events match your filters.</p><button class="clear-link" style="display:block;margin:10px auto 0;font-size:12px" onclick="clearFilters()">Clear filters</button></div></div>`
+    : list.map(buildCard).join('');
+
+  const wp = document.getElementById('welcomePanel');
+  const dp = document.getElementById('detailPanel');
+  const mp = document.getElementById('mapPanel');
+  const mb = document.getElementById('mapBtn');
+
+  if (state.selected && !list.find(e => e.id === state.selected.id)) state.selected = null;
+
+  if (state.mapOn) {
+    wp.style.display='none'; dp.style.display='none'; mp.style.display='flex';
+    mb.textContent='🗺️ Map On'; mb.classList.add('active');
+  } else if (state.selected) {
+    wp.style.display='none'; dp.style.display='block'; mp.style.display='none';
+    dp.innerHTML = buildDetail(state.selected);
+    mb.textContent='🗺️ Map Off'; mb.classList.remove('active');
+  } else {
+    wp.style.display='flex'; dp.style.display='none'; mp.style.display='none';
+    mb.textContent='🗺️ Map Off'; mb.classList.remove('active');
+  }
+}
+
+// INIT
+updateDDs();
+render();
+</script>
