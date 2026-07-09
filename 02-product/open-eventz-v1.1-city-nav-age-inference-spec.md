@@ -111,7 +111,9 @@ When an age filter chip is active under the Frisco City tab:
 
 ### Overview
 
-Play Frisco (CivicPlus) has no structured age data. The only signal is in event titles and descriptions. Use the Claude API to infer age relevance and age suitability at cache/scrape time — not at page load time. Store the result with the event record.
+Play Frisco (CivicPlus) has no structured age data. The only signal is in event titles and descriptions. Use the Claude API (model: `claude-sonnet-4-6`) to infer age relevance and age suitability at cache/scrape time — not at page load time. Store the result with the event record.
+
+**Model rationale:** Sonnet over Haiku. First-run cost difference is ~$0.03 ($0.05 vs $0.08 for ~80 events); ongoing cost is sub-cent on either model. At this cost profile, accuracy is the deciding factor. Sonnet's confidence tier classification is meaningfully more reliable on ambiguous descriptions, and the confidence tier is load-bearing — it determines whether an age badge appears in the UI at all.
 
 ### API route
 
