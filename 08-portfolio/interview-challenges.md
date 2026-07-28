@@ -180,4 +180,54 @@
 
 ---
 
-*Last updated: June 2026.*
+# Technical Concepts & Talking Points
+
+*Not project obstacles — foundational concepts worth being able to explain crisply. Same format: the concept, then the interview soundbite.*
+
+---
+
+## A. Secrets, API Keys & Environment Configuration
+
+**The concept.** Everything in the app's `.env.local` file is **environment configuration** — a mix of **environment variables**, **API keys**, and **secrets**. The practice is called **secrets management / configuration management**, and the guiding principle is the **12-Factor App** rule: *store config in the environment, not in code*. That's why the file is **git-ignored** (never committed) and the same values live as **environment variables on the hosting platform** (Vercel) in production.
+
+**The keys, named properly:**
+
+| Env var | What it's called | Secret or public? | What it is |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Anonymous / publishable key** | Public (safe in browser) | Limited-privilege key, scoped by **Row-Level Security (RLS)**; safe to ship to the client |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Service-role / secret key** | **Secret** (server only) | Full-privilege key that **bypasses RLS**; used only in server code |
+| `GOOGLE_MAPS_API_KEY`, `ANTHROPIC_API_KEY` | **API keys** | Semi/secret | Credentials that authenticate the app to a third-party API |
+| `GCP_SA_KEY_B64` | **Service-account key** | **Secret** | A **service account** = a non-human identity for **machine-to-machine (M2M) auth** to BigQuery; JSON credential, base64-encoded to fit an env var |
+| `CRON_SECRET` | **Shared secret / bearer token** | **Secret** | A password the cron job sends to authenticate itself to `/api/ingest` |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | **Identifier**, not a secret | Public | Just names the GA4 property |
+
+**The concepts an interviewer probes:**
+- **Public vs. secret config** — the `NEXT_PUBLIC_` prefix means "bundle this into the browser." Publishable keys get it; secrets never do (they'd leak to every visitor).
+- **Principle of least privilege** — the two Supabase keys are the textbook example: browser gets the minimum (anon + RLS), the server gets the powerful key and it never leaves the server.
+- **Authentication vs. Authorization** — the *key* authenticates (who is calling); **RLS / scopes** authorize (what they can do).
+- **Machine-to-machine auth / service accounts** — the GCP key: the app acting as its own non-human identity, not on behalf of a logged-in user.
+- **Secret rotation & storage** — secrets should be **rotatable** and stored in a **secrets manager** (Vercel env vars), never in the repo; if leaked, you **rotate** them.
+
+**What to say in an interview.** *"I separated config from code following 12-factor: public identifiers and publishable keys are exposed to the client via a `NEXT_PUBLIC_` prefix, while secrets — the Supabase service-role key, the Anthropic API key, the GCP service-account credential, and the cron shared-secret — stay server-side, git-ignored locally and stored as environment variables in Vercel for production. The two Supabase keys are a clean least-privilege example: the browser gets an anon key constrained by row-level security; the server gets the privileged key that never leaves the backend."*
+
+---
+
+## B. Connecting the Database via MCP (Model Context Protocol)
+
+**The concept.** **MCP (Model Context Protocol)** is an open standard that lets an AI client (Claude Code, claude.ai, Cursor) connect to external tools and data sources through a uniform interface. Supabase publishes an **official Supabase MCP server**: once connected, the agent gets tools to **inspect schema**, **run SQL queries**, **apply migrations**, and **generate types**. It authenticates with a **personal access token (PAT)**, can be **scoped to one project**, and run **read-only**.
+
+**Important distinction.** This is a **development / debugging** connection between the *agent* and the database — it does **not** change the product. The app itself still talks to Supabase through its SDK. (Open Eventz has **no MCP in its runtime**; the app uses direct SDKs — Supabase, the Anthropic API, BigQuery, Google Maps.)
+
+**Where it would help this project.** Much of the debugging was *"what's actually in the database?"*, answered indirectly by running the app or loading the dashboard. A Supabase MCP would let the agent query directly — confirm event counts, verify that migrations ran, check `price_class` / `price_confidence` distributions after re-ingest, or diagnose the earlier "Play Frisco 0 / Total 1000" count bug straight from SQL.
+
+**The security caveat (the part interviewers reward).** Giving an AI agent direct DB access is powerful and risky, and knowing the mitigations is the signal:
+- **Read-only mode** by default — inspect, don't mutate/drop.
+- **Project scoping** — one project, not the whole org.
+- **Least privilege** — don't wire it up with god-mode credentials (same principle as the service-role key).
+- **Prompt-injection / blast radius** — if the agent reads a row whose *contents* contain instructions (e.g., a malicious event description), a naïve setup could act on them. Read-only + scoping limit the damage. This is a documented class of risk for database MCPs.
+
+**What to say in an interview.** *"Yes — Supabase ships an official MCP server, so an AI client can connect to the database to inspect schema, run queries, and manage migrations. I'd treat it as development tooling, not part of the product — the app still uses the SDK. And I'd run it read-only and scoped to a single project specifically because of prompt-injection and blast-radius concerns: handing an agent write access to a production database is a security decision, not just a convenience one."*
+
+---
+
+*Last updated: July 2026.*
