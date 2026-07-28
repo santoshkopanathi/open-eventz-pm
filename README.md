@@ -57,6 +57,35 @@ in an interview:
 
 ---
 
+## Built on the AI PM operating system
+
+Open Eventz is a working proof of the **5-layer AI PM stack** — not as a concept,
+but as shipped evidence. Each layer has a real artifact behind it:
+
+- **Model** — Claude Sonnet chosen over Haiku: the cost delta is trivial at this
+  volume, so accuracy on ambiguous confidence-tier calls was the deciding factor.
+  The selection rationale is in the BUILD-LOG.
+- **Context** — Owned prompt design, deterministic classification rules, and a
+  human-labeled calibration set. The model behaves because the context is engineered
+  and versioned — not because a prompt got lucky.
+- **Orchestration** — A three-source ingest pipeline (scrape → infer → store →
+  serve) with the LLM call embedded mid-workflow, plus fallback logic and graceful
+  degradation at every failure point.
+- **Governance** — A six-layer price-inference risk model, confidence tiers, honest
+  disclosure, two-tier testing (deterministic CI + manual LLM calibration), doc↔test
+  parity enforcement, and two live observability dashboards.
+- **Human** — Every non-obvious decision is documented with its reasoning: why
+  free-by-default, why Definition A, why the badge system was simplified, why the LLM
+  tie-break resolves to *unknown* rather than *paid*. The judgment trail is the artifact.
+
+The "operating system" here is a way of working, not a single file. Its **living
+record is the BUILD-LOG** (`06-app/BUILD-LOG.md`), appended at every phase — a running
+talk → decide → build → observe → iterate loop, not a one-time spec. `02-product/pm-os.md`
+is the **strategy foundation** (vision, market, source strategy, decision log), kept
+current through the build.
+
+---
+
 ## The product
 
 **Three live data sources:**

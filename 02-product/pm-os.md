@@ -221,6 +221,19 @@ A working intake template (separate file: `supervision-policy-intake-template.xl
 - **2026-06-23** — Plano Public Library supervision policy confirmed via direct phone call (June 2026). Finding: **no specific age threshold exists**. The library's stated position is that it is the parent's discretion — the library expects children to behave responsibly but does not set a minimum age for attending without a parent or guardian. This is a meaningfully different policy from Frisco Library and is worth surfacing in the UI. Display approach: rather than showing "check with venue," show a distinct message like "No age requirement — parent's discretion" for Plano Library events. **Confidence tier: Tier 2** (venue general policy, confirmed verbally by staff). Source: direct call to Plano Public Library main branch, June 2026. Recommend re-verifying annually or if policy changes are reported.
 - **2026-06-18** — Established company vision (Section 0). Key decision: kept "discover, access, and create" deliberately broad so the vision isn't constrained to aggregation or even to opportunities that already exist — leaving the door open for the company to eventually create programming and experiences, not just surface them. Explicitly chose not to define "opportunities" narrowly (e.g. as events or activities) so the vision can hold across future products well beyond Open Eventz. Open Eventz is framed as the first proof point of the vision, not the boundary of it.
 
+### Build-phase decisions (v1.0 → public)
+
+*PM-level decisions from the build. Engineering-level detail and the running build journal live in `06-app/BUILD-LOG.md` — that is the continuously-maintained living record; this Product OS is the strategy foundation.*
+
+- **2026-07-16** — Shipped **v1.0 MVP** (live on Vercel + Supabase), then **v1.1**: city-first navigation (Frisco/Plano tabs with per-city filter state) and Play Frisco **LLM age inference**. Chose **Claude Sonnet over Haiku** — the cost delta is trivial at this volume, so accuracy on ambiguous confidence-tier calls was the deciding factor.
+- **2026-07-16** — Adopted the **confirmed-vs-inferred trust model** as a product principle: inferred signals wear a `✦` marker plus a plain-language disclosure ("estimated from event description"), and low-confidence inferences show *nothing* rather than a guess — the same "never guess when you don't know" rule already used for supervision policy (Section 7). Simplified the card badge system: only signals a filter can't communicate appear on a card (structured age ranges moved to the detail view).
+- **2026-07-18** — **v1.2 price inference — Definition A.** Since Play Frisco has no structured fee field, all Play Frisco price is an LLM read, so both free and paid carry the `✦` (libraries stay plain "Free"). Free-by-default with a six-layer risk model whose single failure mode to avoid is paid→free; genuinely torn ⇒ *unknown*. A structured CivicPlus `Cost:` field, when present, is authoritative and overrides the LLM (plain Free/Paid, no `✦`).
+- **2026-07-18** — **Analytics.** GA4 instrumentation of the full funnel + a measurement framework, feeding two dashboards: **Functional** (GA4 → BigQuery — weekly active discoverers, funnel, referral, top events) and **Technical** (Supabase — pipeline health, inference visibility, LLM cost). Acquisition modeled as a GA4 channel segmentation; a Google Search Console panel deferred to the SEO phase.
+- **2026-07-23** — **SEO foundation shipped:** per-event server-rendered indexable pages (`/events/[id]`), schema.org Event JSON-LD, city landing pages (`/frisco`, `/plano`), a dynamic sitemap/robots, and Google Search Console. Structured-data price policy: assert "free" for **confirmed *and* inferred-free** alike — safe because the event page visibly shows the same "Free ✦" badge, so the markup matches the page (reversible via one condition).
+- **2026-07-23** — **Security hardening before going public.** Enabled Supabase Row Level Security on all PostgREST-exposed tables (events = read-only for the anon key; like_counts + supervision_policies locked; writes go through the service role). The anon key is public by design, so RLS — not repository privacy — is what protects the data.
+- **2026-07-23** — **Process & quality.** Consolidated the functional test scenarios into one plan with a CI `doc-parity` check that fails the build if a scenario names a test that no longer exists; CI now captures coverage + report artifacts. Documentation is updated per feature.
+- **2026-07-23** — **Publishing.** Split into two repos — the app (`Imbillionaire/open-eventz`, Vercel-deployed) and PM artifacts (`Imbillionaire/open-eventz-pm`, this repo) — both made public as a portfolio.
+
 ---
 
 ## 9. Open Questions
@@ -233,13 +246,22 @@ A working intake template (separate file: `supervision-policy-intake-template.xl
 - Size SAM/SOM via lightweight primary research (e.g., a short survey to the personas' real-world networks) once there's a pilot user base.
 - ✅ Supervision policy confirmed for all three v1 sources: Frisco Library (Tier 2, age 10 threshold), Plano Library (Tier 2, no age threshold — parent's discretion), Play Frisco (Tier 3 indefinitely — event-specific, no standing policy).
 - Validate the national-level findings in Market Research Sections 3.2–3.4 and 3.6–3.8 against Plano-Frisco specifically, rather than relying on national context indefinitely.
+- ✅ **Launch intent resolved (2026-07-23):** shipped live and being made public as a portfolio (both repos). The pre-launch checklist from the 2026-06-18 decision is largely satisfied — RLS hardening done, supervision verified for the 3 v1 sources, scraping ToS clear.
+- **Google Search Console (opened 2026-07-23):** monitor indexing and Event rich-result eligibility (search visibility ramps over weeks); add a GSC acquisition panel to the Functional dashboard once there is search data.
+- **Production error tracking (open):** wire Sentry (`@sentry/nextjs`) for persistent exception tracking — pending a Sentry project DSN (stored as a Vercel secret).
+- Frisco ISD summer-program page still unverified and museum free-days still manual — both remain backlog (only the 3 v1 sources are live).
 
 ## 10. Next Steps
 
-- Draft the MVP PRD — now has real inputs to work from (personas, market research, competitive analysis): which sources from Section 6 are actually in v1 scope vs. backlog?
-- Decide the v1 data-entry mechanism: fully manual curation, scraper-driven, or a hybrid.
-- Define the data schema for a single "activity" record (free/cost, age range, indoor/outdoor, recurring vs. one-time, location/zip, plus the supervision_age_threshold / confidence_tier / last_verified fields from Section 7).
-- Continue the Supervision Policy Intake outreach for the remaining sources.
+*The kickoff next-steps below (draft the MVP PRD, choose the data-entry mechanism, define the activity schema, integrate the 3 sources) are all **done** — v1.0 → v1.2 shipped and live. Current next steps:*
+
+- **Make both repos public** — after a final eyeball of `04-data/supervision-intake.xlsx` for any real staff name.
+- **Google Search Console:** watch indexing + rich-result eligibility; add the GSC acquisition panel to the Functional dashboard once there is search data.
+- **Sentry:** wire production error tracking once a DSN exists.
+- **Supervision intake:** continue for backlog sources as the catalogue grows; re-verify the 3 confirmed sources annually.
+- **Multi-metro expansion:** revisit the repeatable per-metro checklist (Section 5) if the pilot validates — the data architecture was built for it.
+
+*(Original kickoff steps, now complete: draft the MVP PRD ✅; decide the data-entry mechanism → scraper-driven ✅; define the activity schema ✅; supervision-policy intake for the 3 v1 sources ✅.)*
 
 ---
 
@@ -248,3 +270,6 @@ A working intake template (separate file: `supervision-policy-intake-template.xl
 - **2026-06-16** — Doc created. Seeded Product Charter, Market & Competitive Landscape, Data Sourcing Strategy, and the Plano–Frisco pilot Source Inventory based on initial research.
 - **2026-06-30** — Added Section 6.1: Technical Integration Details. Documents the final integration method, challenges encountered, and reasoning for each of the three v1 sources (Frisco Library, Plano Libraries, Play Frisco). Written as institutional memory so future contributors understand the why, not just the what.
 - **2026-06-17** — Major merge: added User Personas (Section 2), the full Market Research Report (Section 3 — TAM, demographics, behavioral trends, channels, willingness-to-pay, seasonality), expanded Market & Competitive Landscape into the full Channel Analysis (Section 4, replacing the original short stub), and added the Supervision Policy Sourcing Framework (Section 7). Renamed the product to Open Eventz throughout. Added six new Decision Log entries and four new Open Questions reflecting this round of work.
+- **2026-07-16** — Build begins to ship: logged v1.0 MVP going live and v1.1 (city-first navigation, Play Frisco LLM age inference, the confirmed-vs-inferred trust model, badge simplification) in the Decision Log.
+- **2026-07-18** — Logged v1.2 (price inference — Definition A + structured Cost-field override; GA4 analytics + measurement framework; the Functional and Technical dashboards).
+- **2026-07-23** — Brought this Product OS current after a stretch where the running record lived in `06-app/BUILD-LOG.md`: added the **Build-phase decisions** block to the Decision Log (v1.0 → SEO → security → publishing), updated Open Questions and Next Steps to shipped state, and noted the split into two public repos. Named the BUILD-LOG explicitly as the continuously-maintained living record and this doc as the strategy foundation.
