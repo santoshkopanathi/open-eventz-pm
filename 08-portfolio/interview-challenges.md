@@ -230,4 +230,44 @@
 
 ---
 
-*Last updated: July 2026.*
+## C. Securing an AI endpoint — the cost-DoS vector
+
+**The concept.** A normal unauthenticated endpoint that returns data is low-stakes. An endpoint that calls a **paid LLM** on every request is not: leave it open and anyone can script requests to run up your model bill — a **cost-based denial-of-service**. Open Eventz had exactly this — `/api/infer-age` (a testing wrapper over the inference function) was unauthenticated and called Claude. Fixed by gating it behind the same shared-secret bearer token as the ingest endpoint (401 without it). Two lessons: (1) **AI endpoints carry a cost attack surface** ordinary CRUD routes don't — audit every route that *spends money* or *writes data* for auth; (2) **security-through-obscurity isn't security** — the vulnerability lived on the deployed app regardless of source visibility; publishing the code just lowers the bar to discover it.
+
+**What to say in an interview.** *"Before open-sourcing the code I audited every endpoint for auth and found a testing route that called the paid LLM unauthenticated — an open cost-DoS vector — and gated it. The insight is that AI endpoints have a cost attack surface normal endpoints don't, and the risk was on the live app, not the source: publishing code doesn't create the vulnerability, it removes the obscurity that was accidentally hiding it."*
+
+---
+
+## D. Row-Level Security & least privilege
+
+**The concept.** Supabase exposes tables through an auto-generated API reachable with the **anon key** — which is **public by design** (it ships in the browser bundle). So the gate that actually protects the data isn't repo privacy, it's **Row-Level Security (RLS)**: per-table policies deciding what the public key can do. With RLS off, anyone with the anon key can read/write/delete. The fix is **least privilege per table**: `events` = public read-only; `like_counts` / `supervision_policies` / `ingest_runs` = fully locked (only the server's service-role key, which *bypasses* RLS, touches them). Follow-on lesson: the RLS **sweep must cover every exposed table** — the first migration fixed the three tables a linter flagged but missed `ingest_runs`, which a later advisory caught. Re-run the advisor after any migration that adds a table.
+
+**What to say in an interview.** *"The Supabase anon key is public by design, so repository privacy is irrelevant to data security — Row-Level Security is. I enabled RLS on every exposed table with least-privilege policies: the public key can only read the events table, everything else is locked to the server's service role. And I learned to re-run the security advisor after every schema change, because my first pass missed a table a later migration added."*
+
+---
+
+## E. A green local hook ≠ a green pipeline
+
+**The concept.** Local **git hooks** (pre-commit/pre-push) and **cloud CI** run the same commands in **different environments**. Open Eventz's unit-test CI job was red on every push while the local hooks passed — because `jest.config.ts` (a TypeScript config) needs `ts-node` to parse, `ts-node` wasn't a declared dependency, and the local `node_modules` happened to have it while CI's clean `npm ci` didn't. Classic "works on my machine." The fix removed the hidden dependency (config → plain `.js`), but the discipline is the point: **verify against a clean environment and check the actual CI run — a passing local hook is not proof the pipeline is green.**
+
+**What to say in an interview.** *"My local pre-push hooks were passing, so I assumed CI was green — it wasn't, for a while. A TypeScript config needed a package present in my local install but not in CI's clean one. I removed the dependency to fix it, but the real lesson is that a green local hook isn't a green pipeline; you verify against a clean environment and actually look at the CI run."*
+
+---
+
+## F. Doc↔test parity — keeping the test plan honest
+
+**The concept.** A test plan that says *"scenario X is covered by test file Y"* is only trustworthy if something enforces it — otherwise the doc quietly rots as tests are renamed or deleted. Open Eventz added a tiny **CI `doc-parity` job**: it parses the consolidated scenario doc, extracts every test file each scenario claims, and **fails the build if any named test no longer exists**. That turns "we think this is covered" into "CI proves the named test still exists" — engineering-quality rigor a PM rarely brings.
+
+**What to say in an interview.** *"I consolidated the functional test scenarios into one plan and added a CI check that fails the build if a scenario names a test file that no longer exists — so the PM test plan can't silently drift from the actual suite. A test plan that claims coverage is only credible if something enforces the claim."*
+
+---
+
+## G. Reading `npm audit` with judgment
+
+**The concept.** `npm audit` reports every known vulnerability in the dependency tree — but the raw count ("7 high severity") conflates **exploitable** risk with **transitive-dependency noise**. Open Eventz's high-severity flags were all in the framework's bundled `sharp`/libvips (image processing) and `postcss` — and the app uses **no `next/image`**, so the `sharp` code path never runs (unreachable), while `postcss` runs only at build time. The *practical* runtime risk was ≈ none even though the number looked alarming. Judgment: **triage by reachability and runtime-vs-build-time, not by the count** — and separate *actual* risk from *optics* (a public repo's audit score a reviewer might glance at).
+
+**What to say in an interview.** *"`npm audit` flagged several high-severity issues, but they were all transitive to the framework — an image library the app never invokes because it does no image optimization, and a build-time CSS tool — so the exploitable runtime risk was effectively zero. I treat an audit as input to triage by reachability, not a number to react to, while acknowledging the public-repo optics separately."*
+
+---
+
+*Last updated: 2026-07-26.*
