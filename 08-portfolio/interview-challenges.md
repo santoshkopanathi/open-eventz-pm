@@ -270,4 +270,20 @@
 
 ---
 
+## H. Prepping a repo to go public — the sensitivity scan
+
+**The concept.** Making a repo public is effectively **irreversible**: the entire **git history** becomes world-readable forever, not just the current files. So before flipping visibility you scan for two classes of exposure — **secrets** (API keys, tokens, private keys) and **PII** (personal/contact data) — and you scan **history, not just the working tree**, because a secret committed once and deleted later still sits in an old commit. For Open Eventz: grepped tracked files + the full `git log` history for secret patterns (JWTs, `sk-…`, private keys) and PII (emails, phone numbers) across both repos, and **extracted text from the binary files** (`.docx`/`.xlsx`) since a text grep skips them. Result: clean — with one honest residual: a regex can find emails/phones but **can't reliably flag a plain person's name**, so free-text notes in a binary file still warrant a human eyeball. Secondary insight: the **app repo is the higher-risk one** (it holds the real keys locally) — so `.env*` being git-ignored *plus* a clean history is what makes it safe to publish, not obscurity.
+
+**What to say in an interview.** *"Before making the repos public I ran a sensitivity scan — secrets and PII — across tracked files **and full git history**, because history is permanent even after you delete a file. I also extracted text from the binary docs, since a grep skips those, and I was explicit that a pattern scan can't catch a plain name in a notes cell — that needs a human check. The riskiest repo was the app one because it holds the real keys locally, so I confirmed the env file was git-ignored and the history was clean before publishing."*
+
+---
+
+## I. The 5-layer AI PM stack — as shipped evidence
+
+**The concept.** A useful frame for AI product work is a **5-layer stack**: **Model** (capability/cost/latency), **Context** (prompts, RAG, what the model sees), **Orchestration** (how the model call fits inside a larger workflow), **Governance** (evals, guardrails, observability), and **Human** (judgment that can't be delegated). It lets you locate any AI-product problem in the right layer instead of "prompt and hope." Open Eventz maps cleanly, with a real artifact per layer: a documented **model** selection (Sonnet-over-Haiku), owned + versioned prompts and a calibration set (**Context**), an ingest pipeline with the LLM call mid-workflow plus fallback (**Orchestration**), a six-layer risk model + confidence tiers + two-tier testing + observability dashboards (**Governance**), and a full documented judgment trail (**Human**). The interview value isn't reciting the layers — it's showing **evidence at every one**, which is rare.
+
+**What to say in an interview.** *"I think about AI products as a five-layer stack — model, context, orchestration, governance, human — so a problem lands in the right layer instead of getting solved by prompt-tweaking. In Open Eventz every layer has a shipped artifact: a documented model-selection call, versioned prompts plus a calibration set as owned context, the LLM call embedded in an ingest pipeline with fallback, a governance layer of confidence tiers and two-tier testing and dashboards, and a full human judgment trail. The point isn't the vocabulary — it's having real evidence at every layer."*
+
+---
+
 *Last updated: 2026-07-26.*
