@@ -4,9 +4,9 @@
 > the only one that tells parents whether they need to stay or can drop their child off.
 
 **Live app:** https://open-eventz.vercel.app
-**App code:** https://github.com/Imbillionaire/open-eventz
+**App code:** https://github.com/santoshkopanathi/open-eventz
 
-[![CI](https://github.com/Imbillionaire/open-eventz/actions/workflows/ci.yml/badge.svg)](https://github.com/Imbillionaire/open-eventz/actions/workflows/ci.yml)
+[![CI](https://github.com/santoshkopanathi/open-eventz/actions/workflows/ci.yml/badge.svg)](https://github.com/santoshkopanathi/open-eventz/actions/workflows/ci.yml)
 
 ---
 

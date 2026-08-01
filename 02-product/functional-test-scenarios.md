@@ -6,7 +6,7 @@ marked `[A]` (automated) still names a test file that actually exists — so the
 silently drift from the real suite.
 
 **Canonical file:** `06-app/TEST-SCENARIOS.md`
-**On GitHub:** https://github.com/Imbillionaire/open-eventz/blob/master/TEST-SCENARIOS.md
+**On GitHub:** https://github.com/santoshkopanathi/open-eventz/blob/master/TEST-SCENARIOS.md
 
 The three previous versioned docs (base, v1.1 badges/filters, v1.2 price/analytics) were merged
 into that file and are archived here with an `_archived` suffix for history:

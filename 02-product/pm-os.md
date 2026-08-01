@@ -232,7 +232,7 @@ A working intake template (separate file: `supervision-policy-intake-template.xl
 - **2026-07-23** — **SEO foundation shipped:** per-event server-rendered indexable pages (`/events/[id]`), schema.org Event JSON-LD, city landing pages (`/frisco`, `/plano`), a dynamic sitemap/robots, and Google Search Console. Structured-data price policy: assert "free" for **confirmed *and* inferred-free** alike — safe because the event page visibly shows the same "Free ✦" badge, so the markup matches the page (reversible via one condition).
 - **2026-07-23** — **Security hardening before going public.** Enabled Supabase Row Level Security on all PostgREST-exposed tables (events = read-only for the anon key; like_counts + supervision_policies locked; writes go through the service role). The anon key is public by design, so RLS — not repository privacy — is what protects the data.
 - **2026-07-23** — **Process & quality.** Consolidated the functional test scenarios into one plan with a CI `doc-parity` check that fails the build if a scenario names a test that no longer exists; CI now captures coverage + report artifacts. Documentation is updated per feature.
-- **2026-07-23** — **Publishing.** Split into two repos — the app (`Imbillionaire/open-eventz`, Vercel-deployed) and PM artifacts (`Imbillionaire/open-eventz-pm`, this repo) — both made public as a portfolio.
+- **2026-07-23** — **Publishing.** Split into two repos — the app (`santoshkopanathi/open-eventz`, Vercel-deployed) and PM artifacts (`santoshkopanathi/open-eventz-pm`, this repo) — both made public as a portfolio.
 
 ---
 
