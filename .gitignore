@@ -3,3 +3,6 @@
 *.bak
 .DS_Store
 Thumbs.db
+
+# Private, unpublished working docs (LinkedIn drafts, etc.) — never pushed to the public PM repo
+09-private/

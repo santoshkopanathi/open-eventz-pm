@@ -180,6 +180,18 @@
 
 ---
 
+## 16. A Shipped Feature Silently Disappeared — and I Was Confidently Wrong About Why, Twice
+
+**The challenge.** The product's most differentiated feature — a supervision flag telling parents whether they could drop their child off or needed to stay — was once shown across all three data sources. Weeks later it was only rendering for one; the other two showed nothing. No error, no failed test, no alert. It surfaced only because old screenshots proved the feature used to do more. A silent regression on the exact feature the product's trust story depends on.
+
+**What it revealed (and the false trails).** Diagnosing *why* took three passes, and being willing to overturn the first two answers was the whole game. Theory one — a git history rewrite (a secret-scrub `filter-branch` + force-push) had erased it — was stated confidently and was wrong: that rewrite preserved every commit. Theory two was also wrong. The actual cause only held up on the third pass: the all-source version had been refactored down to a single-source inline version **before the project was ever committed to git.** A month of development had run with no version control, so the working feature died in an unversioned window with no diff and nothing to recover.
+
+**What this forced.** Three durable changes. (1) Get code under version control *before* refactoring, not after it's "ready." (2) Point the strongest guardrail at the differentiator — the supervision logic had been inline in a component with no unit test, so it fell out silently; it now warrants an extracted, per-source-tested module with a doc-parity check. (3) Record the *change*, not just the current state — the build log had described what the feature *is*, which hid the day it started doing less. It also reframed the incident as an asset: a real production-style regression with a documented root cause and fix, which is exactly the "operating history" that AI-PM interviews probe for and most portfolios lack.
+
+**What to say in an interview.** "One of my most differentiated features silently lost two-thirds of its coverage and I didn't notice for weeks — no test watched it. When I investigated, I was confidently wrong about the cause twice before I found it: the feature had been refactored away before the code was ever under version control, so there was no history to recover. Three lessons came out of it — commit before you refactor, put your strongest guardrail on your most important feature, and log the change rather than just the end state. And the meta-lesson: the first explanation that fits isn't the cause, it's just the first thing that fits. I got to the real answer by disproving myself, not by trusting my first read."
+
+---
+
 # Technical Concepts & Talking Points
 
 *Not project obstacles — foundational concepts worth being able to explain crisply. Same format: the concept, then the interview soundbite.*
@@ -286,4 +298,4 @@
 
 ---
 
-*Last updated: 2026-07-26.*
+*Last updated: 2026-08-04.*
