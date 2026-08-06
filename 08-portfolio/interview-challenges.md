@@ -262,7 +262,9 @@
 
 **The concept.** Local **git hooks** (pre-commit/pre-push) and **cloud CI** run the same commands in **different environments**. Open Eventz's unit-test CI job was red on every push while the local hooks passed — because `jest.config.ts` (a TypeScript config) needs `ts-node` to parse, `ts-node` wasn't a declared dependency, and the local `node_modules` happened to have it while CI's clean `npm ci` didn't. Classic "works on my machine." The fix removed the hidden dependency (config → plain `.js`), but the discipline is the point: **verify against a clean environment and check the actual CI run — a passing local hook is not proof the pipeline is green.**
 
-**What to say in an interview.** *"My local pre-push hooks were passing, so I assumed CI was green — it wasn't, for a while. A TypeScript config needed a package present in my local install but not in CI's clean one. I removed the dependency to fix it, but the real lesson is that a green local hook isn't a green pipeline; you verify against a clean environment and actually look at the CI run."*
+**It happened twice — and the second time I fixed the process, not just the bug.** A large UI reskin later passed the *same* pre-push hook (typecheck + unit, both green) but turned **CI red on E2E** — because the Playwright smoke suite was **CI-only**, so the one layer that tests the UI I'd just rewritten wasn't in my local gate. Three assertions were coupled to changed presentation (a card label, a chip colour, a `button.rounded-full` selector). The fix wasn't just repairing them: I **moved E2E into the pre-push hook but guarded it to skip gracefully when no browser is installed** — E2E had been dropped from the hook originally *because* a missing local browser caused false failures, so a naïve "always run E2E" would just re-introduce that. Run-when-possible / skip-gracefully lets you tighten the gate without re-breaking it.
+
+**What to say in an interview.** *"A green local hook isn't a green pipeline — and I learned it twice. First, a TypeScript config needed a dependency my machine had but CI's clean install didn't. Second, a UI reskin passed my pre-push hook because it only ran typecheck and unit tests — the E2E suite that would've caught it was CI-only, so it went red after I'd already merged. What I'm proud of is the second fix: instead of just repairing the tests, I moved E2E into the pre-push hook but guarded it to skip gracefully when no browser is installed — so the local gate now covers the layer most likely to break, without the false failures that made me leave it out before. Your local gate has to include the layer that tests what you actually change."*
 
 ---
 
@@ -298,4 +300,4 @@
 
 ---
 
-*Last updated: 2026-08-04.*
+*Last updated: 2026-08-06.*
