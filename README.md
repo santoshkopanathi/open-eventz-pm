@@ -3,7 +3,7 @@
 > A live, deployed kids' event discovery app for Frisco and Plano, TX —
 > the only one that tells parents whether they need to stay or can drop their child off.
 
-**Live app:** https://open-eventz.vercel.app
+**Live app:** https://openeventz.com
 **App code:** https://github.com/santoshkopanathi/open-eventz
 
 [![CI](https://github.com/santoshkopanathi/open-eventz/actions/workflows/ci.yml/badge.svg)](https://github.com/santoshkopanathi/open-eventz/actions/workflows/ci.yml)
