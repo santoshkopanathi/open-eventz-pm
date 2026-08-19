@@ -192,6 +192,26 @@
 
 ---
 
+## 17. A Scraper That Returned "Everyone" — Server-Side vs. Client-Side Rendering, and Why I Didn't Reach for the LLM
+
+**The challenge.** Parents on the Frisco tab started seeing adult events ("D&D for Adults," "Adult Volunteer Open House"), and the age filters stopped working — selecting "Toddlers (0–5)" still returned 305 of 306 events. The data confirmed it: 304 of 306 Frisco events were stored as age 0–17. The single source of Frisco age truth — BiblioCommons' "Suitable for:" field — had gone blank for our scraper, so every event fell through to the "all ages" fallback, which passes the adults-only gate (`age_min < 18`) and overlaps every kid filter.
+
+**The false start (an honest correction).** My first pass had called the surrounding staleness "pure staleness, not a parser break" — because I checked the *listing* page markup and it was intact. That was incomplete: I hadn't checked the *detail-page* age extraction, which was broken. Two different scrape steps; I'd validated the wrong one.
+
+**What caused it.** BiblioCommons had migrated event pages to a **client-side-rendered `/v2`** architecture. The "Suitable for:" audience is now hydrated by JavaScript *after* the page loads. Our server-side `fetch` retrieves the raw pre-hydration HTML, where the `<span itemprop="name">` audience is empty — no JSON-LD, no `__NEXT_DATA__`, nothing. The value a human sees in the browser simply wasn't in the bytes our scraper received. And the newly-automated nightly ingest had faithfully re-scraped the empty source, overwriting good data with "0–17" everywhere — which is what surfaced the break.
+
+**What I was going to try.** Extend the LLM age-inference we already run for Play Frisco to Frisco Library — infer the age band from title + description. Robust, but it adds a per-event cost and an inference dependency to reconstruct data that, in principle, still existed.
+
+**What we explored instead — and what unlocked it.** The product owner pointed out the obvious-in-hindsight fact: the "Suitable for:" value *is* visible in the browser. That reframed the problem from "the data is gone" to "the data moved to client rendering." So instead of approximating it, I drove a real headless browser to the event page and watched its network tab — and found BiblioCommons' own **unauthenticated JSON API**: `GET /events/events/{id}?client_scope=events` (with `Accept: application/json`) returns `definition.audience_ids`, and `/events/event_audiences` returns the id→name taxonomy (six stable audiences — the same IDs as the original audience feeds). Validated instantly: Family Story Time → `[Children (0-5)]`; D&D for Adults → `[Adults]`.
+
+**How it helped.** Re-pointing the scraper to the API is strictly better than the LLM path: **deterministic, free, authoritative** (the real data source with stable IDs), decoupled from fragile presentational HTML — and it came with a cleaner description field and a `featured_image_id` hook usable for event images later. We avoided spending money and adding an inference dependency to rebuild data the site was already handing its own front-end.
+
+**What this forced.** A durable habit: when a scrape suddenly returns empty, first decide *is the data gone, or did it move to the client?* — a field visible in the browser but absent from `curl` is the tell — and before reaching for an LLM to reconstruct missing data, check whether the site's own front-end fetches it from an API you can call directly. The network tab is the shortcut past HTML scraping.
+
+**What to say in an interview.** "Our kids-events app suddenly started showing adult events and the age filters went dead. Root cause: the source library site had moved to client-side rendering, so the age field a human sees in the browser was no longer in the HTML our server-side scraper fetched — every event defaulted to 'all ages.' I was about to solve it with LLM inference, which we already use elsewhere — but the smarter move came from a simple reframe: the data's still visible in the browser, so it isn't gone, it just moved. I opened the network tab, found the site's own JSON API feeding that field, and pointed our scraper at it. Deterministic, free, and authoritative — no model needed. The lesson I carry: distinguish 'the data is gone' from 'the data is client-rendered,' and reverse-engineer the authoritative source before you approximate it. Knowing when *not* to use an LLM is part of using AI well."
+
+---
+
 # Technical Concepts & Talking Points
 
 *Not project obstacles — foundational concepts worth being able to explain crisply. Same format: the concept, then the interview soundbite.*
