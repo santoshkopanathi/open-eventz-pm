@@ -400,4 +400,28 @@ Net: **103 events → 84 kid-facing** on production, and the new source was most
 
 ---
 
+## N. Measuring a discovery product — a north star, not vanity metrics
+
+**The concept.** A discovery product's success isn't downloads or pageviews — it's whether a parent actually *found something to do*. So the north star is **weekly active discoverers** (people who engage the funnel), and the funnel is instrumented end-to-end: view → filter/engage → intent → **conversion**, where conversion is defined as *adding an event to a calendar* or *getting directions* — the real "I'll show up" signals, not a like. It's **channel-segmented from day one** (organic/SEO vs. direct vs. referral) so acquisition is a *dimension of the funnel*, not a separate report. And it was wired **before launch** (GA4 → BigQuery → two dashboards: a functional one for the funnel, a technical one for pipeline health + per-inference LLM cost), because you can't retrofit measurement onto traffic you've already lost. The discipline: pick the one metric that means the product did its job, define the steps that lead to it, and instrument them before you need them.
+
+**What to say in an interview.** *"For a discovery product I don't measure downloads — I measure whether someone found something to do. My north star is weekly active discoverers, and I instrumented the whole funnel: view, filter, intent, then conversion, which I defined as adding an event to a calendar or getting directions — the real 'I'll show up' signals, not a like. I segmented it by channel from the start, so acquisition is a slice of the funnel rather than a separate dashboard, and I wired it before launch because you can't retrofit measurement onto traffic you've already lost. The judgment is choosing the single metric that means the product worked, then instrumenting the steps that lead to it."*
+
+---
+
+## O. Evals for an LLM feature — a calibration set, and the honest frontier
+
+**The concept.** An LLM feature isn't done when the prompt "seems to work" — you need a way to *measure* it that survives prompt and model changes. I treat the prompt as an **owned, versioned artifact** and gate it with a **calibration set** of hand-labeled ground-truth examples, run in two tiers: a **deterministic tier in CI** (free, fixture-based, catches regressions on every push) and a **real-LLM tier** run on demand when the prompt or model changes. That turns "did I break the classifier?" into a number, not a vibe. The part interviewers reward is naming its **limits**: a calibration set scores accuracy against labels, not the richer things modern eval asks — rubric / LLM-as-judge scoring, regression suites across prompt versions, or A/B-ing a model change against a *product* metric rather than a model one. Knowing exactly where my eval coverage ends is the difference between "prompt and hope" and "I know what I'm not yet measuring."
+
+**What to say in an interview.** *"I don't consider an LLM feature done because the prompt looks right — I gate it with a calibration set of hand-labeled examples, run deterministically in CI on every push and against the real model when the prompt or model changes. That makes 'did I break it?' a number, and it versions with the prompt as an owned artifact. What I'm honest about is the ceiling: it scores accuracy against labels, not rubric or LLM-as-judge evals, and it doesn't yet A/B a model change against a product metric. Knowing exactly where my eval coverage stops is the point — that's what separates measuring from hoping."*
+
+---
+
+## P. Demo vs. production — scoping to avoid obligations, and the checklist to cross
+
+**The concept.** The sharpest honest thing about this project: **it has no real users, and that's a deliberate scope decision, not an oversight.** It was built as a portfolio artifact to demonstrate judgment — and instrumented *as if* live — specifically to avoid the obligations real users create: abuse controls, a data-correction feedback loop, and (because a wrong drop-off answer is a child-safety issue) moving supervision data from "verified where possible" to "verified before anyone relies on it." The judgment isn't "I didn't get users"; it's **knowing exactly what changes to go from demo to production, and choosing not to cross that line yet.** The checklist is written down: rate-limiting + abuse detection on engagement, an account-light path for cross-device sync (scoped by risk — see Concept K), scrape monitoring/alerting, a user-facing "this is wrong" correction mechanism, and the supervision-verification bar. Naming the line — and the cost of crossing it — is the real answer to "how would you take this to production?"
+
+**What to say in an interview.** *"I'll be straight: it has no real users, and that's on purpose. I built it to show judgment and instrumented it like a live product, but I deliberately didn't launch to real parents — that creates obligations I'd have to earn: abuse controls, a correction loop, and moving the child-supervision data to a 'verified before anyone relies on it' bar, because a wrong drop-off answer is a safety issue. What I can point to is the exact demo-to-production checklist — rate-limiting, account-light sync scoped by risk, scrape alerting, a user correction mechanism, and the supervision standard. The judgment is knowing precisely what it takes to cross that line, and choosing when."*
+
+---
+
 *Last updated: 2026-08-19.*
