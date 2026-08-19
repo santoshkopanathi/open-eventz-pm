@@ -320,4 +320,20 @@
 
 ---
 
-*Last updated: 2026-08-06.*
+## J. A reskin is a product decision — presentation vs. trust-sensitive data
+
+**The concept.** A "visual-only" reskin sounds like it can't change behaviour — but a presentation choice *becomes* a product decision the moment it touches trust-sensitive data. During Open Eventz's "Weekend Paper" reskin, the child-supervision "can I drop my kid off?" indicator moved from **colour-coded alarm** (red = no / green = yes) to **one calm, text-driven callout** ("instruction, not alarm — no red-on-pink"). That isn't styling: a wrong "you can drop off" answer must never be *dressed in reassuring colour*, so the meaning has to live in the words, not the hue. The discipline that makes it safe is keeping the resolving logic (`getSupervisionBadge`) and its unit tests **independent of presentation** — a theme swap changes how it looks and never what it decides (proven by the fact the reskin didn't touch that suite). Bonus practice: design feedback was reviewed on a **before/after mockup for sign-off before any code**, so the call was made deliberately, not discovered after shipping.
+
+**What to say in an interview.** *"People assume a reskin is cosmetic, but a presentation choice becomes a product decision the second it touches high-stakes data. In my kids-events app, a 'visual-only' refresh was where I decided to stop colour-coding the drop-off-safety indicator — green/red can imply a safety verdict, and the model behind it can be wrong — so I moved the meaning into calm text and kept the logic and its tests independent of the styling. A theme swap can change the look but never the behaviour. And I reviewed the change on a mockup before writing code, rather than eyeballing it after."*
+
+---
+
+## K. Scope a feature by risk, not demand — the accounts decision
+
+**The concept.** "Add user accounts" reads like one feature; it's actually a **step-change in risk**. On a managed auth provider (Supabase) the login itself is a day or two — but you inherit account lifecycle, session security, and the real cost: becoming a **custodian of personal data**, with privacy-law exposure, breach-notification duties, and — for a **kids** product — potential **COPPA** liability the moment any feature stores data *about a specific child*. So the decision isn't "accounts: yes/no," it's **"what's the thinnest identity that unlocks the one feature I actually want?"** For a cross-device saved list, that's **OAuth-only, adults-only, no child data, row-level security locked per user** — ~80% of the value at ~20% of the risk; full password auth + child profiles is where cost *and* liability spike. It's also a conscious crossing of the **portfolio→real-product line** (the project was deliberately scoped as a demo precisely to avoid this obligation surface).
+
+**What to say in an interview.** *"When someone asks for 'user accounts,' I scope it by risk, not demand. The login is trivial on a managed auth provider — the real cost is becoming a data custodian, with privacy law and, for a kids app, COPPA if you ever store a child's data. So I ask what the smallest identity is that unlocks the feature: for cross-device saves, OAuth-only, adults-only, no child records, row-level security per user gets most of the value at a fraction of the liability. Recognising that 'accounts' crosses the demo-to-real-product line — and choosing the lightest identity that clears it — is the judgment, not wiring up a login."*
+
+---
+
+*Last updated: 2026-08-15.*
