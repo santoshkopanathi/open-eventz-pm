@@ -232,6 +232,34 @@
 
 ---
 
+## 19. The Ingest Outgrew Its Serverless Function — and the Green Run That Wrote Nothing
+
+**The challenge.** The nightly ingest started as a Vercel scheduled function, but a full multi-source run — scrape four sources, then LLM-classify the new events — takes far longer than a request-scoped serverless function is allowed to live (a 10-second ceiling on the plan). The function hit the wall mid-run. The worst part wasn't the crash; it was that a timed-out or partial run didn't announce itself — the schedule looked like it had fired, and the data just quietly went stale or half-updated. **A green-looking scheduled run that actually wrote nothing is worse than a hard failure, because nothing tells you.**
+
+**What caused it, and the fix.** The workload is a *batch job*, not a web request — the wrong shape for a function metered by seconds. I moved ingest to a **GitHub Actions scheduled workflow** (`0 11 * * *` + manual `workflow_dispatch`), with **one independent job per source** (`matrix` + `fail-fast: false`) so a slow or broken source can't block the others, each with isolated logs. Two failures on the way, both instructive:
+- **Exit 2 — secrets invisible.** I'd added the keys as *Environment*-scoped ("Production") secrets, which job-level `${{ secrets.* }}` can't see. Fix: declare `environment: Production` on the job so the environment's secrets are in scope. The lesson: *where* a secret is scoped is as load-bearing as its value.
+- **Exit 1 — the runtime moved under me.** `@supabase/supabase-js`'s `createClient()` threw *"Node.js 20 detected without native WebSocket support."* The default runner was Node 20; a global `WebSocket` is first stable in Node 22. Fix: pin `node-version: 22`. (Same family of lesson as the timezone bug in #18 — a dependency's behaviour depends on the runtime, and the runner is not your laptop.)
+
+**What this forced.** A scheduled job needs a way to **shout when it fails**, or a silent green run masks staleness for days. So a `notify` job opens (or comments on) a **GitHub Issue** whenever a source job or the data-quality gate fails — chosen over SMTP/Slack because it needs no new secrets (`GITHUB_TOKEN` suffices), GitHub emails the owner, and an issue has to be *closed*, not just skimmed past at 6 AM.
+
+**What to say in an interview.** *"My nightly data ingest outgrew its serverless function — a multi-source scrape-plus-LLM-classify job can't finish inside a 10-second request timeout, so runs were silently timing out and the data went stale without any alarm. The real fix was recognising it's a batch job, not a web request, and moving it to a scheduled CI workflow with one isolated job per source. Two failures taught me more than the move: environment-scoped secrets aren't visible to job-level references, and a dependency needed a newer Node than the default runner — both are 'the runtime isn't what you assumed' bugs. And I learned that a scheduled job's most important feature is that it shouts when it fails; a green run that quietly wrote nothing is the dangerous state."*
+
+---
+
+## 20. The Real Scale Test Isn't the First Hard Source — It's Whether the Second Is Cheaper
+
+**The challenge.** My first sources were archaeology — a dead public API, a reverse-engineered feed, a page that renders its data in JavaScript so a scraper sees nothing (see #17). Each was days of bespoke work. For a data-aggregation product, that raises the existential question: does every new city/source cost the *same* slog, or does the cost *fall*? If it doesn't fall, there's no product — just an endlessly growing pile of fragile one-offs. So when I added a brand-new source — a large local park's events — I treated it as a deliberate test of the expansion thesis, not just another integration.
+
+**What made it cheaper — and why that's the whole point.** Two things, both built *before* the source:
+- **A written onboarding playbook** (`SOURCE-ONBOARDING.md`, 7 principles). The park's one surprise — its REST API is `403` WAF-blocked to a bare request but returns `200` with `Accept: application/json` + a browser UA + `Referer` — didn't cost me an afternoon of confusion; it just became the next line in the playbook. Surprises turned into documented steps instead of fresh archaeology.
+- **A shared LLM classifier** (`classifyEvents`, extracted from the existing Play Frisco path in the same change). I wrote **zero new rules** about what counts as a "kids event" for this source. The same classifier read a brand-new, mixed-audience calendar and correctly **hid a "Pop & Pour" wine night** — reasoning on file: *"explicitly requires guests to be 21+"* — while keeping the story times and festivals. A hand-tuned keyword list would have needed a rewrite per source; the model generalised.
+
+Net: **103 events → 84 kid-facing** on production, and the new source was mostly *wiring*. Adding my second *kind* of source cost **less** than the first, not more — and re-running the old source afterward made **0 extra LLM calls** (the classifier extraction was regression-free).
+
+**What to say in an interview.** *"For a data-aggregation product the moat isn't the first integration — anyone can grind through one — it's whether the tenth is cheap. So I treated adding a new source as a test of that. It was mostly wiring, for two reasons I'd built on purpose: a written onboarding playbook that turned each new source's quirk into a documented step instead of fresh research, and a shared LLM classifier so I wrote no new 'is this for kids?' rules — the same model read a brand-new calendar and correctly hid a 21-plus wine event while keeping the family ones. The rules don't generalise; the model does. That's the difference between a product that scales and a pile of one-off scrapers."*
+
+---
+
 # Technical Concepts & Talking Points
 
 *Not project obstacles — foundational concepts worth being able to explain crisply. Same format: the concept, then the interview soundbite.*
@@ -356,4 +384,20 @@
 
 ---
 
-*Last updated: 2026-08-15.*
+## L. Guard the output, not just the process — the post-ingest data-quality gate
+
+**The concept.** Unit and end-to-end tests run on **mocked** data and prove one thing: the *code* matches my intent. They are structurally blind to bad *data* — a source that changes shape, an empty field, a wholesale time shift. A pipeline that reports "success" while writing garbage is **worse** than one that fails, because nothing tells you. So there's a distinct layer whose job is different from testing: after every ingest it asserts invariants against the **real database** and turns the pipeline **red** on violation — age variety, **no adult-titled event stored kid-visible**, the toddler filter actually *narrows*, per-source non-empty, freshness, plausible start times, plus a **live-source canary** that confirms the upstream source still exposes the field we depend on. Two incidents proved the layer earns its place: the client-side-render break (#17), where every event fell to an "all ages" fallback while all tests stayed green, and the timezone shift (#18). The design rule: **point the check at the thing the user actually sees (the output), because every intermediate "success" signal can lie** — and the check belongs *in front of* the user-visible write, not merely reporting after it (detection is not prevention).
+
+**What to say in an interview.** *"Logic tests can't catch bad data — they run on mocked inputs and only prove the code does what I intended. But a data product fails when the data is wrong, even if the code is perfect. So I added a layer that runs against the real database after each refresh and asserts what has to be true: ages have variety, no adult event is stored kid-visible, the age filter actually narrows, the sources aren't empty or stale — and it turns the pipeline red if not. A green checkmark should mean the thing you care about is true, not just that the code ran. And I put the guard on the output the user sees, because every intermediate 'success' can lie."*
+
+---
+
+## M. LLM-primary classification with a governance pre-filter — and fail-closed
+
+**The concept.** Deciding "is this event for kids?" started as a **keyword deny-list**. It was brittle in both directions: every new source needed the list re-tuned, and it broke on phrasing it hadn't seen. I inverted the architecture to **LLM-primary** — the model reads the unstructured event text, judges kid-relevance, and **stores its reasoning** (auditable, not a black box). A small keyword pre-filter survives, but only for **governance**: an obvious hard-block layer (an explicit adults-only override), not the primary decision. Two properties make it safe and scalable: it **generalises across sources** — the same classifier hid a *"Pop & Pour"* 21+ wine night on a brand-new calendar with no new rules, where a keyword list would have needed a rewrite — and it is **fail-closed**: an LLM error or a low-confidence result sets `kid_relevant = false` rather than guessing, because a wrong *"this is for kids"* is the expensive direction. The bounding rule pairs with #17: **use an LLM for irreducible ambiguity, deterministic code for structured data that already exists** — never an LLM to reconstruct data a source is already handing its own front-end.
+
+**What to say in an interview.** *"My kid-relevance classifier used to be a keyword deny-list — brittle, and it needed re-tuning for every new source. I made it LLM-primary instead: the model reads the messy event text, decides, and stores its reasoning, so it's auditable. I kept a tiny keyword layer, but only as a governance hard-block, not the main decision. Two things make it work at scale: it generalises — the same model correctly hid a 21-plus wine event on a source it had never seen, no new rules — and it's fail-closed, defaulting to 'not for kids' when it errs or isn't confident, because a false 'kid-friendly' is the costly mistake. The judgment I care about is knowing when the LLM is the right tool: irreducible ambiguity, yes; structured data that already exists, no."*
+
+---
+
+*Last updated: 2026-08-19.*
