@@ -353,9 +353,9 @@ Neither value is safe **if the row is written at all**. The fix was to stop writ
 
 **Verification.** 14 unit tests, including a structural guard that there is exactly one paid call site and that it is gated — proven non-vacuous by deleting the gate and watching two tests fail. Then a live run with `MAX_LLM_CALLS_PER_RUN=0` against the real source: **37 events, 0 paid calls, not flagged as capped**, because every event was a cache hit. That was the integration property most worth checking — if the cap had counted cache hits, every nightly would have gone red.
 
-**What is still open, deliberately.** The in-code cap bounds **calls**; the dashboard figure is `calls × unit price`, an **estimate, not metered spend**. So it is a dashboard number, not a control — the account-level spend limit (Console → Settings → Billing → *Spend limits*) is the outer backstop that does not depend on my arithmetic being right. Recorded as an open gap rather than quietly counted as covered.
+**Two controls at two layers — and the one thing still open.** The in-code cap bounds **calls**; the account-level spend limit bounds **dollars** ($5/month, email alert at $2, auto-reload off). They are deliberately independent: the account limit does not depend on my arithmetic being right, and it also covers spend my code cannot see at all — Claude Code and Playground usage on the same account. I checked whether my own ceiling was sized against that budget rather than just against normal volume: one capped run is ~300 × $0.006 ≈ **$1.80**, so two capped runs in a night would consume most of a $5 month. That is acceptable *only* because a cap hit fails the run and alerts — you find out after the first night, not the third. **Still genuinely open:** the dashboard figure is `calls × unit price`, an **estimate, not metered spend** — a dashboard number, not a control. Recorded as a gap rather than quietly counted as covered.
 
-**Summary.** *"The last gap in my governance audit was a cost cap — nothing bounded LLM spend. Normal cost was already near zero because classification is batched and cached, so the cap was never about normal volume; it was about the anomaly, a source suddenly returning ten thousand events. The counter was the easy part. The real problem was what a refused call leaves behind: my first version marked the skipped event 'not for kids', which is the correct value when the model *errors* — but a budget skip is not a decision, it is a deferral, and the cache cannot tell those apart. It would have read that placeholder as an answer and hidden the event permanently, even after I raised the cap. Writing null instead would have failed open, because a null classification passes my API gate. So the answer was to not write the row at all — the event is withheld and re-tried next run. The lesson I carry: when you add a skip path, ask what the next run will believe about the rows it leaves. And I kept one gap open in the doc rather than claiming it: my spend figure is an estimate, not metered, so the real dollar backstop is the account-level limit, not my arithmetic."*
+**Summary.** *"The last gap in my governance audit was a cost cap — nothing bounded LLM spend. Normal cost was already near zero because classification is batched and cached, so the cap was never about normal volume; it was about the anomaly, a source suddenly returning ten thousand events. The counter was the easy part. The real problem was what a refused call leaves behind: my first version marked the skipped event 'not for kids', which is the correct value when the model *errors* — but a budget skip is not a decision, it is a deferral, and the cache cannot tell those apart. It would have read that placeholder as an answer and hidden the event permanently, even after I raised the cap. Writing null instead would have failed open, because a null classification passes my API gate. So the answer was to not write the row at all — the event is withheld and re-tried next run. The lesson I carry: when you add a skip path, ask what the next run will believe about the rows it leaves. And I sized my own ceiling against the actual budget, not just against normal volume — one capped run is about a dollar eighty against a five-dollar monthly limit, which is only acceptable because hitting the cap fails the run and alerts. The account-level limit is the second control, independent of my arithmetic and covering spend my code cannot even see. The one gap I kept open in the doc rather than claiming: my spend figure is an estimate, not metered."*
 
 ---
 
@@ -519,6 +519,14 @@ Neither value is safe **if the row is written at all**. The fix was to stop writ
 
 ## O. Evals for an LLM feature — a calibration set, and the honest frontier
 
+> **Superseded in part by Concept T (2026-09-01).** This was written when the only instrument was
+> a ~7-case trap set. There is now a 64-event hand-labelled golden set, a written ship gate, and
+> two measured runs that rejected a redesign. **Do not give this answer as the current state** —
+> it understates the work and invites the exact follow-up T answers. Kept because the reasoning
+> for why manual was right *at that scale* is still sound, and because the two sets do different
+> jobs: the trap set asks "did I break something I already knew about?", the golden set asks
+> "how good is this?" They must never be merged.
+
 **The concept.** An LLM feature isn't done when the prompt "seems to work" — you need a way to *measure* it that survives prompt and model changes. I treat the prompt as an **owned, versioned artifact** and gate it with a **calibration set** of hand-labeled ground-truth examples, run in two tiers: a **deterministic tier in CI** (free, fixture-based, catches regressions on every push) and a **real-LLM tier** run on demand when the prompt or model changes. That turns "did I break the classifier?" into a number, not a vibe. The part interviewers reward is naming its **limits**: a calibration set scores accuracy against labels, not the richer things modern eval asks — rubric / LLM-as-judge scoring, regression suites across prompt versions, or A/B-ing a model change against a *product* metric rather than a model one. Knowing exactly where my eval coverage ends is the difference between "prompt and hope" and "I know what I'm not yet measuring."
 
 **Summary.** *"I don't consider an LLM feature done because the prompt looks right — I gate it with a calibration set of hand-labeled examples, run deterministically in CI on every push and against the real model when the prompt or model changes. That makes 'did I break it?' a number, and it versions with the prompt as an owned artifact. What I'm honest about is the ceiling: it scores accuracy against labels, not rubric or LLM-as-judge evals, and it doesn't yet A/B a model change against a product metric. Knowing exactly where my eval coverage stops is the point — that's what separates measuring from hoping."*
@@ -540,6 +548,12 @@ Neither value is safe **if the row is written at all**. The fix was to stop writ
 ---
 
 ## Q. A guard you haven't seen fail is not a guard — testing the tests
+
+> **Continues in Concepts U and V (2026-09-01).** The same principle bit twice more: a guard that
+> asserted the *shape* of the source code rather than its behaviour, and a verification attempt
+> whose own "break it and watch it fail" check silently did not apply the break — so the tests
+> passed against an unmodified file and proved nothing. **The check that a guard failed needs
+> checking too.**
 
 **The concept.** Once you start writing guardrails, the guardrail becomes a new place bugs can hide — and it hides them *worse*, because a check you believe in produces false confidence. Two incidents on this project made that concrete, and they fail in opposite directions:
 
@@ -565,4 +579,101 @@ The same reframe changes the economics. Cost scales with the **number of new eve
 
 ---
 
-*Last updated: 2026-08-19.*
+---
+
+## S. A check that could not fail — auditing controls for vacuous success
+
+**The concept.** Concept Q covers guards that fire wrongly or never fire. This is the harder cousin: a guard that **reports success it is structurally incapable of withholding**. It never goes red, never cries wolf, never appears in an incident review — it simply sits on the dashboard converting a healthy subset into a clean bill of health for the whole system. The tell is that nobody has ever seen it fail, and everyone reads that as evidence the system is well.
+
+**What I observed.** One of my four event sources rebuilt part of its website and its structured events feed ceased to exist — the plugin serving it was removed, so the API route, the calendar pages and the individual event pages all broke. Entirely upstream; nothing on my side changed.
+
+The fail-closed machinery worked end to end. The fetch failed, the batch came back empty, the ingest exited non-zero, the run went red, and the failure email arrived. Because the stale-row purge is skipped on an empty batch, every previously-stored event from that source survived: the data went **stale, not wrong**, which is the governing rule of the product holding under a real outage.
+
+The post-ingest data-quality gate reported **green on all three nights.** Its freshness check asked "was anything written recently?" as a single query for the newest write timestamp across the *whole* table. One source writes ~700 rows nightly, so that timestamp is always minutes old. The check was **mathematically incapable of failing** unless all four sources died simultaneously — and it had been documented as a per-source check since the day it was written.
+
+The second finding was sharper than the first. A separate per-source check asserts each source still holds a minimum number of events, and that one *is* per-source — but it passed too, at 106 events, because stale rows satisfy a count. It would have kept passing for months, until those events aged past their own start dates. **Non-empty measures the stock; freshness measures the write.** Two checks that sound like the same question, and neither could see a source that had stopped writing.
+
+**How I remedied it.** Freshness became per-source: every source must have written within 48 hours, and the failing line names the one that went quiet. The source list is now a completeness-checked map against the source type, so adding a fifth source without adding it to the gate is a **compile error**, not a source that silently goes unwatched. I encoded the defect itself as a regression test — one case asserts the *replaced* global check would still have passed on the same data — so the fix is protected by a test about the bug, not only a test about the behaviour. Then the house rule: run it against the real database and watch it go red for the right reason, which it did, naming the source at 77 hours, while every other check stayed green.
+
+I also corrected the governance document, which had been claiming a per-source control that only ever existed for half the row. That mattered more than the code change — an inventory that overstates a control is worse than one that omits it, because it stops you looking.
+
+**What's still open.** The gate will now go red nightly until that source restores its calendar, which is correct but creates a second-order risk: an alert you learn to ignore is worse than no alert, so acknowledged-broken sources need a *muting mechanism that expires* rather than a permanent exception. And the product-side question is untouched — a visitor currently cannot tell that one source's listings have stopped updating.
+
+**Summary.** *"One of my four data sources went down upstream. My pipeline caught it in one night — the fetch failed, the run went red, the email fired, and because an empty batch skips the cleanup step, no wrong data was ever served. But my data-quality gate reported green for three nights straight, and the reason is the part worth talking about. The freshness check asked 'was anything written recently' across all four sources at once, and one of those writes seven hundred rows a night — so it could not have failed unless everything died simultaneously. It wasn't a check that failed, it was a check that could not fail, and it had been passing for months meaning nothing. What made it worse is that my guardrail document described it as a per-source check; only half of that row was ever true. So: any control that aggregates over healthy and unhealthy subjects can't see the unhealthy one — ask the question per subject or don't claim the control. And the general lesson I took is that we test our guards by making them fail, but we almost never audit the ones quietly reporting success. Failure gets verified; success gets trusted."*
+
+---
+
+## T. Building an evaluation that is allowed to overrule you
+
+**The concept.** Most teams build evals to *validate* a change. That is backwards, and it is why so many evals become decoration: an instrument that can only agree with you is not measuring anything. An eval earns its place the first time it stops something you wanted to ship. To get there you have to make three decisions **before** you look at any result — what you sample, how you score, and what number would make you stop.
+
+**What I observed.** I had a real architectural criticism of my own classifier: its instructions fused a factual question ("what does this text say about price?") with a product policy ("assume free when it says nothing"). That fusion meant the policy could not be changed without re-running the model over the whole catalogue, and the model's actual reading ability could not be measured at all. The fix seemed obvious — separate them.
+
+Before building it, I made those three decisions. **Sampling:** a census where the population was 38 and complete (that source is purged nightly, so sampling would have added error for nothing and invited a permanent "how did you pick?"), and a reproducibly-ordered random sample of 30 from 106 where labelling everything was not worth it. **Scoring:** not accuracy — accuracy lets a trust-burning error cancel against a harmless one, so five newly-correct labels and five newly-dangerous ones leave the percentage unmoved. Instead I counted disagreements *by direction*, and gated on a single one: shown as free when it actually costs money. **The gate:** that count held at zero, written down and committed before any labelling began.
+
+Then the labels came back and **disproved the premise of a different change I had already planned** — I believed some deterministic rules were too conservative; the data showed the system asserts beyond its evidence roughly eight times more often than it withholds. Then the redesign itself measured worse: it refused to answer on 25 of the 35 cases a careful human had resolved without difficulty, dropping agreement from 71% to 37% at identical safety. **The assumption I was removing turned out to be one the human evaluator applies themselves**, visible in their own labelling notes.
+
+**How I remedied it.** I split the initiative. The half that measured as a clear win shipped, and I verified in production that the offline prediction held — the events the measurement said would return, returned, and the two it flagged as misses stayed missing. The half that beat nothing was struck and recorded as a rejected design with the evidence, so nobody picks it up in six months and re-implements it.
+
+**What's still open.** The set cannot answer everything and I wrote down what it cannot: it contains no adults-only events, so it cannot validate the control that exists to catch them — one of my three original criteria was therefore untestable and returned a clean zero that meant nothing. It also counts recurring instances, so one series occupying five slots gets five votes. And nothing yet connects evaluation quality to a product outcome; at this traffic there is no way to A/B a classification change against behaviour.
+
+**Summary.** *"I built an evaluation set for an LLM classifier and it stopped my own redesign — twice. The discipline that made that possible was deciding three things before looking at any result: what to sample, how to score, and what number would make me stop. I did not score accuracy, because a single percentage lets a dangerous error cancel against a harmless one — I counted errors by direction and gated on one of them held at zero. Then the data contradicted me. The prompt I wanted to fix contained a domain assumption, and it turned out the human evaluator was applying that same assumption instinctively — so removing it made the model refuse to answer on two-thirds of the cases a person found easy. I shipped the half that measured well, struck the half that didn't, and wrote down the evidence for both. An eval that can only agree with you isn't an eval."*
+
+---
+
+## U. When each fix uncovers the next one
+
+**The concept.** A correct fix can be an incomplete fix, and the incompleteness is often only visible *after* it ships. That is not sloppiness — it is what happens when a system has several layers that each interpret the same value differently. The discipline is to keep asking, after every fix, **"what does the next component believe about the state I just created?"** — and to notice when you have only asked that question of one of them.
+
+**What I observed.** Three defects in a single day, each surfaced by the fix before it.
+
+The first: when a model call failed, the code stored a value that the caching layer read as a settled decision. The event was never re-examined — one transient API error removed it from the product permanently, silently. It had **never actually fired** across 144 events, which is why it survived: a latent fault in a path that only executes when something else is already broken. The identical fault had already been reasoned through and avoided in code sitting directly beside it.
+
+The second: the fix was to record *nothing* rather than record a wrong answer. But that is only safe if no record already exists. During a controlled re-classification, one event's model call returned malformed output, was correctly skipped — and its already-cleared record was then read by the visibility rule as *"this event has no classification because it doesn't need one."* It was served. I confirmed it on the live API before fixing it.
+
+The third: the fix for *that* shipped with a test asserting the source code's shape rather than its behaviour. Which is not verification at all.
+
+**How I remedied it.** The visibility rule became aware of *why* a value was absent — for a source we classify with a model, absent means "never classified" and must be hidden; for a source with no model involvement, absent is expected and correct. Then I verified it the only way that means anything: induced the failure against the real database, watched the guard fail and name the affected event, and restored it. And I wrote the general rule down, because it is worth more than the three fixes: **declining to record an answer is only fail-safe when there was no prior record.** I had asked what the next *run* would believe about a skipped item. I never asked what the live *product* would believe about it in the meantime.
+
+**What's still open.** Nothing on this specific path, but the pattern generalises and I have not audited for it elsewhere: anywhere a system distinguishes "no value" from "no answer", those two states are one refactor away from being confused.
+
+**Summary.** *"I shipped three fixes in a day and each one exposed the next. A failed model call was being stored as a permanent decision, so one network blip removed an event from the product forever. Fixing that meant writing nothing instead — but writing nothing only helps if there is no prior record, and during a re-classification a cleared record was read downstream as 'this doesn't need classifying', so an unclassified event got served. Fixing that revealed my guard was testing what the code looked like rather than what it did. The rule I took away is the one I could only see after the third: declining to record an answer is only fail-safe when nothing was recorded before. I'd asked what the next run would believe about a skipped item. I never asked what the live product would believe about it in the meantime."*
+
+---
+
+## V. Deciding where a test belongs — and when not to write one
+
+**The concept.** Testability is not free. The reflex when something is hard to test is to restructure it until it is easy — but if that restructuring means expressing the same rule twice, you have bought a green suite and paid for it with a new way to be wrong. The question is not *"can we test this?"* but **"where does this rule actually live, and what would a test of it be testing?"**
+
+**What I observed.** A rule deciding what users are shown lived in a database query, not in application code. The conventional move is to mirror it as a function so it can be unit-tested. I did not, because the mismatch that creates — two definitions of one rule, free to drift apart silently — *is* the exact failure class the rule exists to prevent. A test of the mirror would pass happily while the real filter behaved differently, which is worse than no test, because it looks like coverage.
+
+There is a weaker version of the same mistake that I had already made: the first guard I wrote for this rule asserted the *shape of the source code*. It confirmed the code looked right. It could not have told me whether the query behaved right.
+
+**How I remedied it.** I put the assertion where the rule lives — against real production data, as a check in the nightly quality gate. It fails if any model-classified event sits in the database without a classification, and it **names the events** rather than reporting a count, so the alert is actionable rather than a number someone has to go investigate at six in the morning. Then I proved it can fail: set one real event to the broken state, watched the gate go red naming it, restored it. Fixture tests cover the pure logic, including the case that matters most — an event from a source with no model involvement legitimately has no classification and must *not* trip the alarm.
+
+The two controls do different jobs, which is the point: the query rule stops the exposure, the nightly check tells you it happened. The incident this encodes would have gone red within hours instead of being found by hand.
+
+**What's still open.** The nightly check runs after ingest, so there is a window between a bad write and the alert. That is acceptable here because the query rule is the thing actually protecting users — but I would not accept it if the check were the only control.
+
+**Summary.** *"I turned down a unit test. A rule about what users get shown lived in a database query, and the standard move is to mirror it in code so you can test it. But that gives you two definitions of one rule that can silently disagree — which is precisely the failure I was guarding against. A passing test on the copy would have looked like coverage while the real thing misbehaved. So I asserted it against real production data instead, as a nightly check that names the affected events rather than counting them, and I proved it works by breaking one row and watching it go red. The principle I'd carry to another team: don't restructure a system to make it testable if the restructuring introduces the bug you're testing for. Ask where the rule lives, and put the assertion there."*
+
+---
+
+## W. Failures that present as normal operation
+
+**The concept.** The defects that survive longest are not the ones that throw errors — those get fixed the same week. They are the ones whose failure mode is *indistinguishable from working correctly*. A missing event does not look like a bug; it looks like there was nothing on. A missing label looks like a field that does not apply. No alert fires, no user complains, and the only way to find them is to point a control at real output and compare it against what you expected.
+
+**What I observed.** Two defects, live for months, neither reportable by any user. Both had the same root cause: two pieces of logic branched on a data source's *name* rather than on the *property* that mattered — whether that source's data is produced by a model. A second source with the same property was added later and fell through to the path built for a differently-shaped one.
+
+The trust-facing symptom: every event from that source carried a model-inferred audience, but the wrong path presented it as though the source had stated it, dropping the "estimated" marker. **We were claiming more certainty than we had**, on the exact field a parent uses to decide whether an event suits their child.
+
+The larger symptom: that path required a data field the source does not populate, so every one of its events — roughly a fifth of the catalogue — was silently excluded the moment a user applied any filter. No error. No log line. Nothing anyone would think to report.
+
+**How I remedied it.** Route on the capability, not on the identifier: a named list of "sources classified by a model", exported and shared by both the display logic and the filter, so the two cannot drift. The same change fixed the inverse error I had been carrying — descriptions that *do* state an age were being marked as estimates, because the marker was decided by which source an event came from rather than by what the text actually said.
+
+**What's still open.** I found these by reading code while implementing something else, which is luck rather than method. The systematic version is a control that compares expected coverage against actual under each filter — I have the per-source data-quality checks that would host it, but that specific assertion is not written yet.
+
+**Summary.** *"The defects that live longest are the ones that look like correct behaviour. I found two that had been live for months and that no user could have reported: a whole data source's events vanished whenever anyone applied a filter, and the same source's guessed age labels were being displayed as if the source had confirmed them. Both came from branching on a source's name instead of on the property that actually mattered — whether its data came from a model. A missing event doesn't look like a bug, it looks like a quiet week, so nothing would ever have alerted. That's the class I now design for specifically: not 'what could throw an error' but 'what could fail while looking exactly like success' — and those need a control pointed at real output, because no exception handler will ever see them."*
+
+
+*Last updated: 2026-09-01.*
