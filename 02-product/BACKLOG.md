@@ -5,8 +5,13 @@ parent or the owner would notice) or **T** (technical — what keeps the thing t
 guardrails, observability, scale). The tags are *views*, not separate backlogs: the work competes
 for the same hours, so it is ranked once.
 
-Started 2026-10-22, consolidating the gaps recorded in [GUARDRAILS.md](https://github.com/santoshkopanathi/open-eventz/blob/master/GUARDRAILS.md), the parked
-design work in [BUILD-LOG.md](https://github.com/santoshkopanathi/open-eventz/blob/master/BUILD-LOG.md), and the open product questions from the dashboard.
+Potential functionality that needs to be built, and technical stories around guardrails, design
+etc. are included in this document. **The below priority is system generated and needs to be
+manually evaluated.**
+
+Sources: the gaps recorded in [GUARDRAILS.md](https://github.com/santoshkopanathi/open-eventz/blob/master/GUARDRAILS.md),
+the parked design work in [BUILD-LOG.md](https://github.com/santoshkopanathi/open-eventz/blob/master/BUILD-LOG.md),
+and the open product questions from the dashboard.
 
 **This file lives in the PM repo; the code lives in [open-eventz](https://github.com/santoshkopanathi/open-eventz).**
 Links below point there, so they resolve from either side.
