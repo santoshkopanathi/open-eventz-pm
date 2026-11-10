@@ -45,7 +45,7 @@ Links below point there, so they resolve from either side.
 | 8 | Inferred dates are published but never graded | T | P1 | open |
 | 9 | No conversions since 2026-08-18 | F | P1 | open |
 | 10 | Event archive / change log | T · F | P1 | parked by decision |
-| 11 | Nothing checks the rendered page | T | P1 | open |
+| 11 | Nothing checks the rendered page | T | P1 | done 11-10 for crawlable surfaces; app still uncovered |
 | 12 | Alerting is binary — no thresholds | T | P1 | open |
 | 13 | No application error tracking (Sentry) | T | P1 | open |
 | 14 | Search Console migration not yet complete | F | P1 | open |
@@ -183,12 +183,16 @@ cannot name events GA4 still remembers. Design settled: a **log**, not a move �
 with validity windows; analysis-only to start, same database, written by a job outside the ingest.
 **Done when.** Unpicked when #8 or #7 needs it. **Size.** 2 days.
 
-### 11. Nothing checks the rendered page · T
+### 11. Nothing checks the rendered page · T · **half closed 2026-11-10**
 The weekly live-site read remains the most effective detector in the project and the least
 reliable. Both timezone bugs and the duplicate SaturYAY were found by a human opening the site.
 **Done when.** Something automated looks at the real rendered page — a handful of events whose
 times are asserted against the source, or a visual snapshot of the city pages.
 **Size.** 1–2 days. **Highest-value *new* guardrail.**
+**Built:** `npm run seo:check` covers the crawlable surfaces — live sitemap and both city pages
+compared against the database, as a Heartbeat job. It found a three-week-old bug on its first run.
+**Still open:** the app itself. Rename this item to *"nothing checks the app"* when it is next
+reprioritised; closing it means #19.
 
 ### 12. Alerting is binary · T
 A run fails or it does not. No threshold on cost spikes, guardrail hit-rate or purge volume, so a
@@ -422,7 +426,7 @@ inference accuracy (#8) · dashboard rows resolvable to a title · source publis
 
 ---
 
-## 11 · Nothing checks the rendered page · P1 · T
+## 11 · Nothing checks the rendered page · P1 · T · **half closed 2026-11-10**
 
 **Problem.** Both timezone incidents and the duplicate SaturYAY were found by a human opening the
 site. The weekly live read is the most effective detector in this project and the least reliable —
@@ -438,6 +442,27 @@ becomes visible. It is the layer that would have caught both incidents without a
 
 **Metrics.** Defects caught before a human notices (today: zero) · mean time to detect a
 user-visible defect · false-failure rate, which decides whether anyone keeps it on.
+
+**Built 2026-11-10 — the crawlable half.** `npm run seo:check` reads the indexable events from the
+database, then fetches the live `/sitemap.xml`, `/frisco` and `/plano` over HTTP and fails if any
+indexable event is absent. It runs as a separate job in the Heartbeat workflow. Over HTTP against
+production on purpose: the gap it measures is between our intent and what the platform serves, and
+a test importing the page component passed happily throughout the month the sitemap was frozen.
+
+**It paid for itself on the first run**, naming a bug that was three weeks old and invisible from
+every direction a person would look. `kaleidoscope-park` joined the pipeline on 2026-10-20 without
+being added to the source→city map, so all 10 of its indexable events were missing from `/frisco`
+— while the app listed them, the sitemap listed them, and their own event pages were fine. The
+only wrong surface was the one whose entire audience is a crawler. The map is now a complete
+`Record<EventSource, CitySlug>`, so an unmapped source is a type error.
+
+**Metric moved:** defects caught before a human notices — **zero → one**.
+
+**What remains, and it is now named better.** This reads server HTML for event links. It would not
+notice if the app rendered a blank page, a broken map, or a wrong local time on a card. The honest
+description of the remaining gap is **"nothing checks the app"**, not "nothing checks the rendered
+page" — a narrower and more actionable item, and the weekly live read is still the only cover for
+it. Overlaps #19 (E2E against real data), which is the natural way to close the rest.
 
 ---
 
