@@ -106,10 +106,14 @@ The open question was whether **any** nightly-ingested event reaches Google with
 **Answer: no.** Measured twice, a fortnight apart — 10 missing events on 10-22, then 14 of the 14
 indexable events created over the previous four days on 11-10. The route moved to
 `dynamic = 'force-dynamic'`; the build confirms it changed from `○` to `ƒ`.
-**The scope check that mattered.** `/frisco` and `/plano` carry the same `revalidate = 3600` and
-were suspected of the same fault. They are not: production `/frisco` carried 13 events the sitemap
-was missing, so hourly ISR does fire for them. The staleness was specific to the sitemap metadata
-route, and the fix stayed one line wide instead of three.
+**The scope call I got wrong first.** `/frisco` and `/plano` carry the same `revalidate = 3600`.
+I compared production, found `/frisco` carrying 13 events the sitemap lacked, and concluded ISR
+does fire for them. **Wrong — that comparison only ranked two stale artifacts.** The absolute
+check settled it: `/frisco` was serving events dated three days earlier, which a current render
+cannot produce at all. ISR regeneration is request-driven and serves the stale copy while
+rebuilding, so on a low-traffic site a crawler-facing page is almost always the old render. The
+fix covers all four crawler-facing routes, `/events/[id]` included — its content is stable but its
+*indexability decision* is not.
 
 ### 28. Google Maps billing not enabled · F · T
 **Why.** Every map on the site renders under a diagonal **"For development purposes only"**
@@ -262,7 +266,7 @@ events created since the previous deploy, 14 were indexable and **all 14 were ab
 sitemap** — the per-event SEO work had been inert between releases for a month. The route is now
 `force-dynamic`.
 
-Two things are worth keeping from how this closed. First, **a deploy was hiding the symptom**:
+Three things are worth keeping from how this closed. First, **a deploy was hiding the symptom**:
 every release rebuilt the file and made the sitemap briefly correct, which is why it presented as
 intermittent and why the first measurement on 10-22 was easy to under-read. A bug that repairs
 itself whenever you ship is a bug you will keep re-discovering. Second, **the fix was a cache
@@ -270,6 +274,11 @@ decision, not a cleverness decision** — a sitemap is a few hundred URLs read b
 of times a day, so the honest answer was to stop caching it rather than to build a revalidation
 hook from the ingest job. The hook was the more sophisticated option on the original card and the
 wrong one: it would have added a second thing to monitor in exchange for saving one query.
+
+Third, and the one that nearly left half the bug in place: **a relative check cannot scope a
+fix.** Comparing one suspect page against another felt like evidence, ranked them correctly, and
+answered a question I had not asked. Ground truth — the clock, the database, what the page claims
+about itself — is the only thing that can say whether *either* is right.
 
 **Still open:** this fixes *publication*, not *indexing*. Whether Google acts on it shows up in
 Search Console over the following weeks, and that measurement belongs to #14.
