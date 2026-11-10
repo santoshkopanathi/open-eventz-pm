@@ -559,7 +559,9 @@ text as data, never instructions; basic content screening on what we republish. 
 by **#25** — the red-team set measures this exposure for the first time, and its result decides
 whether this stays at P2. An item whose risk nobody has measured is not low-priority, it is
 unquantified.
-*Measured 2026-11-10, and it splits in two.* **Invisible** injected text is closed — `visibleText()`
+*Measured 2026-11-10, and it splits in two — with the exposure of both halves low, checked rather
+than assumed: 0 HTML comments and 0 markup tags across 2,371 production rows.* **Invisible**
+injected text is closed — `visibleText()`
 removes comments, markup and zero-width characters before any decision is made, and the one real
 finding in #25 was exactly this. **Visible** injected text remains open: the prompt still does not
 frame source text as data-never-instructions, and the red-team set showed the model declining
@@ -617,6 +619,12 @@ instruction flips a label, we have found a live injection path in a product aime
 the only group where the model must contradict the surface reading of the text, and it is also
 the highest-severity error this product can make.
 
+> ⚠️ **Everything above this line is the card as written BEFORE the run — the hypothesis, kept
+> deliberately so the outcome can be graded against it rather than quietly rewritten.** Both
+> predictions in it turned out wrong: the friendly-language group scored 6/6, and a planted
+> instruction *did* flip a label but **did not** reveal a live injection path. Read the Outcome
+> below for what actually happened.
+
 **Metrics.** Fail-closed rate per group (target: 100% on group 1 — a planted instruction must
 never change a label) · false-visible count, the adult events shown to parents · regression cases
 added to CI.
@@ -647,10 +655,34 @@ reads through it. That includes the price resolver, which regexes the same text 
 a hidden "free admission" flip a paid event to free — the failure a parent feels at the door, and
 one the fixture set had not thought to probe. Re-run: 20/20.
 
+**How exposed were we? Graded against production, and my first write-up overstated it.**
+
+The fixture was synthetic — I wrote it. That proves the *rule* was fragile, not that the *pipeline*
+was reachable, and this card had speculated we might find "a live injection path in a product aimed
+at parents." We did not.
+
+> **2,371 production rows: 0 HTML comments, 0 markup tags of any kind, 1 stray zero-width
+> character** — in an ESL program the library already excludes as 18+.
+
+**Verdict: a design weakness closed as cheap insurance, not a live exposure.** Corrected in
+BUILD-LOG, GUARDRAILS, EVALS, INGEST-DESIGN and TEST-SCENARIOS as well.
+
+Two things still justify the work, and the second is the real one:
+
+1. **The protection we had was incidental.** Three of four scrapers strip tags before storing, so a
+   comment is removed as a *side effect* — undesigned, and incomplete, since a comment containing a
+   `>` leaves a tail. The fourth source stores its description verbatim.
+2. **The zero-width case fails open.** A hidden instruction that *hides* an event is fail-closed and
+   low severity. A zero-width space inside "adults only" makes the rule **miss**, showing an
+   adults-only event to a parent — the highest-severity error this product can make. One such
+   character is already in our data, from untidy CMS output rather than an attacker.
+
 **What the exercise actually bought.** Not reassurance about the model. It found that our *own*
 rules were the unguarded input, and it closed the invisible-text half of #20 as a side effect.
-The general lesson is worth more than the patch: a deterministic guard inherits the trust level of
-whatever text you feed it, so sanitise before the rule, not after it.
+Two lessons, the second newer than the first: a deterministic guard inherits the trust level of
+whatever text you feed it, so sanitise before the rule rather than after it — and **grade a
+red-team finding against production before writing it up as a win**, because the weaker, measured
+claim is the one that survives being questioned.
 
 ---
 
