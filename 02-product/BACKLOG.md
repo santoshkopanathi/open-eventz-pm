@@ -677,6 +677,22 @@ Two things still justify the work, and the second is the real one:
    adults-only event to a parent — the highest-severity error this product can make. One such
    character is already in our data, from untidy CMS output rather than an attacker.
 
+**And the exposure figure is now watched, not just recorded.** Quoting that number in five
+documents quietly turned a one-off observation into a standing claim — and standing claims decay.
+Sources change shape; one connector had already been rebuilt that month. So the figure got an
+instrument the same day, in two halves:
+
+- **Prevention** — invisible characters are stripped at the single write path. They can never be
+  legitimate, and they are the fail-open case.
+- **Detection** — markup is deliberately *not* stripped there, because markup means a source
+  changed shape and a human should look at that connector. The post-ingest gate fails and names
+  it. That asymmetry is also what keeps the check *able* to fail.
+
+It found the one known row on its first run — and would then have failed on it every night
+forever, because the row is in the past and no ingest can rewrite one. The check now **fails on
+upcoming events and reports past ones**, which is a scoping decision defensible in one sentence:
+nothing reads a past row. Green against production across 623 upcoming events.
+
 **What the exercise actually bought.** Not reassurance about the model. It found that our *own*
 rules were the unguarded input, and it closed the invisible-text half of #20 as a side effect.
 Two lessons, the second newer than the first: a deterministic guard inherits the trust level of
