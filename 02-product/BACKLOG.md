@@ -63,7 +63,7 @@ Links below point there, so they resolve from either side.
 | 26 | LLM-as-judge — can a model screen prompt changes? | P · T | P1 | open |
 | 27 | Natural-language search | P · F | P2 | sprint build, Fri 10-23 |
 | 28 | Google Maps billing not enabled — map showed a Google error dialog | F · T | **P0** | done 11-11 |
-| 29 | Maps API key is public and now billable — no referrer restriction | T | **P0** | open — needs owner action |
+| 29 | Maps API key is public and now billable — no referrer restriction | T | **P0** | done 11-11 |
 
 ---
 
@@ -144,7 +144,7 @@ nothing worked. **With billing attached, an unrestricted public key is a spendin
 someone can lift it and bill their own traffic to this project. Needs an HTTP-referrer restriction
 limited to `openeventz.com/*` plus the budget alert. Tracked as **#29**.
 
-### 29. The Maps key is public and now billable · T
+### 29. The Maps key is public and now billable · T · **done 2026-11-11**
 **Why.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is embedded in the page source by design — a browser
 map cannot work otherwise, and every Maps site has this. What changed on 2026-11-11 is the
 consequence. **Yesterday an unrestricted key was harmless, because the key did not work.** Today
@@ -161,6 +161,31 @@ alert is the check on the control.
 **Severity note.** Low likelihood, unbounded cost. Nobody is hunting this site for keys. But the
 downside has no ceiling until (c) exists, which is why the budget alert matters even more than the
 restriction. **Owner action — not a code task.** **Size.** 10 minutes in the console.
+
+**Closed 2026-11-11.** All three done: API restriction narrowed 35 → 1 (Maps JavaScript API only),
+website restriction set to `openeventz.com/`, `.openeventz.com/` and `localhost:3000/`, budget
+alert configured.
+
+**Correction to (c) above — a budget alert notifies, it does not cap.** Google Cloud budgets have
+no hard stop. The card called it "the check on the control" and implied more than that. The
+restriction is the only thing that actually prevents the spend; the alert tells you after the fact.
+Worth being precise about, because "I set a budget" feels like a cap and is not one.
+
+**Two things learned that are worth carrying.**
+1. **A bare host already means every path.** Google's docs: *"if you specify www.domain.com, it
+   acts as a wildcard www.domain.com/\*"*. The console strips the `*` on display, which looks like
+   the restriction is narrower than it is. The city pages and event pages are covered.
+2. **A future security-headers change could lock us out of our own map.** If the app ever sets
+   `Referrer-Policy: no-referrer` or `same-origin`, the browser stops sending the Referer to
+   Google and our own restriction rejects us. Checked: no such header is set today, in the
+   response or in `next.config.ts`. **This is a landmine for whoever adds security headers later**
+   — the map would break with no obvious connection to the change that broke it.
+
+**How it was verified, since the obvious test is the wrong one.** Requesting a tile with a forged
+`Referer` returns HTTP 200 regardless — tiles are edge-cached and carry a session token, so they
+prove nothing. Referrer enforcement happens when Maps JS bootstraps. The real test is loading a
+sub-path in a browser and confirming **`RefererNotAllowedMapError` is absent**: done on `/frisco`,
+with tiles confirmed loaded in-page.
 
 ---
 
