@@ -42,6 +42,7 @@ Links below point there, so they resolve from either side.
 | 5 | Dry runs write `ingest_runs` records | T | P1 | done 10-22 |
 | 6 | No heartbeat — a run that never starts is silent | T | P1 | done 10-22 (partial — see item) |
 | 7 | Classification quality has no eval on change | T | P1 | **in progress — harness built 2026-11-11; needs labels + a CI trigger** |
+| 30 | Kaleidoscope descriptions truncated by the source at ~200 chars | T | P1 | **fixed 2026-11-11 — cached rows still need re-classifying** |
 | 8 | Inferred dates are published but never graded | T | P1 | open |
 | 9 | No conversions since 2026-08-18 | F | P1 | open |
 | 10 | Event archive / change log | T · F | P1 | parked by decision |
@@ -883,3 +884,48 @@ Kept short, as context for what the list above inherited.
 | 10-21 | Duplicate SaturYAY, inference past a stated end date, ids naming the wrong day |
 | 10-21 | A billing failure that read as a model failure |
 | 10-21 | [GUARDRAILS.md](https://github.com/santoshkopanathi/open-eventz/blob/master/GUARDRAILS.md) catalogue — 36 controls documented with worked examples |
+
+---
+
+## 30 · Kaleidoscope descriptions were truncated at ~200 characters · P1 · T · **FIXED 2026-11-11**
+
+**Problem.** The Kaleidoscope connector read `description` from each page's schema.org Event
+JSON-LD. That field is the page's **meta description**, which the park's CMS caps at about 200
+characters — so **17 of 37 stored descriptions ended mid-sentence in an ellipsis**. The
+truncation was the source's, faithfully copied by us. The full prose was in the same HTML
+response we had already fetched.
+
+**Impact.** That text is the classifier's only input for age, kid-relevance and price. Judging
+those from 200 characters that stop mid-word is a strictly worse question than the page can
+answer — and the defect is invisible downstream: the model receives a fair-looking input,
+returns a weak answer, and the weakness reads as a model failure. **An input defect wearing a
+model defect's clothes.** It also contaminated the price golden set: labels for those events
+were made from truncated text, which EVALS.md challenge #4 had already flagged as "possibly
+real for kid-relevance" without knowing the cause.
+
+**How it was found.** Not by a gate. The eval worksheet built the same day prints the stored
+text of each event so a human labels exactly what the classifier sees — and the ellipses were
+impossible to miss. We had an eval, a red-team suite and a post-ingest data-quality gate, and
+none of them asked *is the input intact?*
+
+**Fix.** `parseLongDescription()` in `src/lib/kaleidoscope-parse.ts`, applied in the connector.
+It anchors on the JSON-LD summary itself rather than a CSS selector — the park rebuilt this
+site once already, and that rebuild cost us 26 rows — finds the paragraph the summary came
+from, and takes its sibling paragraphs, stopping as soon as anything but whitespace separates
+two of them. Bidirectional prefix test, because on one page the summary spans several short
+paragraphs. Returns `null` rather than anything shorter than what we had, so an untruncated
+page is never made worse. Every uncertain case fails closed.
+
+**Verified against the live source:** 20 event pages, 11 truncated, **11 recovered in full, 0
+still truncated**, 6 untruncated pages untouched. Description text 11,571 → 17,935 chars. 10
+new tests; 502 green.
+
+**Still open — the cached judgments.** `classifyEvents` treats a stored `kid_relevant` as a
+cache hit and makes no new call, so existing Kaleidoscope rows keep the decisions they were
+given from truncated text. The better input only reaches the model for events it has not seen.
+**Clearing the cached inference for `source = 'kaleidoscope-park'` (~37 rows, roughly $0.23 in
+LLM calls) is the remaining step**, and it is a deliberate production write, not a side effect.
+
+**Metrics.** Count of stored descriptions ending in an ellipsis, by source (target: 0 where the
+page has more text) · classification changes after re-running the source with full text, which
+is the honest measure of what the truncation was costing.
