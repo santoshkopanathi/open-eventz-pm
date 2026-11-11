@@ -41,7 +41,7 @@ Links below point there, so they resolve from either side.
 | 4 | Sitemap has not regenerated in 24h+ | F · T | **P0** | done 11-10 |
 | 5 | Dry runs write `ingest_runs` records | T | P1 | done 10-22 |
 | 6 | No heartbeat — a run that never starts is silent | T | P1 | done 10-22 (partial — see item) |
-| 7 | Classification quality has no eval on change | T | P1 | open |
+| 7 | Classification quality has no eval on change | T | P1 | **in progress — harness built 2026-11-11; needs labels + a CI trigger** |
 | 8 | Inferred dates are published but never graded | T | P1 | open |
 | 9 | No conversions since 2026-08-18 | F | P1 | open |
 | 10 | Event archive / change log | T · F | P1 | parked by decision |
@@ -416,6 +416,49 @@ precisely because nothing would catch a regression, so the prompt ossifies.
 false-visible rate — adult or unsuitable events shown to parents, the one that matters most ·
 false-hidden rate — real kids' events suppressed, the cost of being cautious · eval runtime and
 cost per run, since an eval nobody can afford to run is not a control.
+
+### Progress — 2026-11-11
+
+**The three blockers are closed. The set itself is nearly empty.**
+
+The first measurement reframed the task. Of the 64 labelled events, **8 still existed** — all 26
+Kaleidoscope rows purged after that connector was rebuilt and its id scheme changed, and 30 of 38
+Play Frisco rows aged off the city feed. The descriptions had never been copied into any file, so
+**56 human judgments are now permanently unscorable.** The harness had been printing a score the
+whole time; it skipped what it could not find and reported the remainder.
+
+| Blocker | State |
+|---|---|
+| Inputs read live from the database | **closed** — `eval/golden/events.json`, append-only, 123 events frozen and committed |
+| Harness ran a pasted prompt (5,681 chars vs production's 5,340) | **closed** — imports `inferPlayFriscoEvent` + `resolvePriceClass`; a structural test forbids any local `SYSTEM_PROMPT` |
+| Labels git-ignored | **closed** — `eval/golden/labels.json` committed, keyed by event id |
+
+Gates implemented and unit-tested in `src/lib/eval-score.ts`: **wrongly-free = 0** and
+**leaked = 0** blocking, **over-claim must not increase** against a committed baseline,
+under-claim and wrongly-hidden informational beside them. `npm run eval:score` exits non-zero.
+First run over the 8 survivors: 0 wrongly-free, 0 leaked, 3 over-claim (baseline accepted).
+
+**Two things remain, and neither is a build task.**
+
+1. **Labels.** 115 frozen events are unlabelled. `npm run eval:worksheet` generates the sheet and
+   `-- --parse` reads it back, but the labelling is human time nobody can delegate. **A set of 8
+   is an instrument, not a gate.**
+2. **Where it runs.** A model-calling test cannot sit on the per-push gate — paid API, minutes per
+   run, non-deterministic — so it would produce false reds, and a gate that cries wolf is routed
+   around within a week. Proposal: path-filtered on `src/lib/age-inference.ts` and the `MODEL`
+   constant, plus nightly for provider-side drift, re-running only the failed cases before
+   declaring a failure. **Needs a decision, not a sprint.**
+
+**Scope correction on kid-relevance.** The problem statement above says it "has no golden set at
+all". It has 64 labels — but **60 of them are "yes"**, so a classifier that said yes to everything
+would score 94% while being the worst possible version of the product. A naturally-sampled set is
+structurally unable to detect that failure, and sampling harder makes it worse. **The red-team set
+(20 adversarial fixtures, 6 of them adult events written in family language) is the right
+instrument** — promote it to the gate rather than labelling more wild events.
+
+Age still has zero labels and stays **ungated as a stated choice**: a wrong age chip is advisory
+and a parent corrects it by reading on, whereas kid-relevance and price are decisions taken on
+their behalf.
 
 ---
 
