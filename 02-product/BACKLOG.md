@@ -62,7 +62,8 @@ Links below point there, so they resolve from either side.
 | 25 | Red-team set — does the classifier fail closed? | P · T | P1 | done 10-26 — one finding, fixed 11-10 |
 | 26 | LLM-as-judge — can a model screen prompt changes? | P · T | P1 | open |
 | 27 | Natural-language search | P · F | P2 | sprint build, Fri 10-23 |
-| 28 | Google Maps billing not enabled — map is watermarked | F · T | **P0** | open — needs owner action |
+| 28 | Google Maps billing not enabled — map showed a Google error dialog | F · T | **P0** | done 11-11 |
+| 29 | Maps API key is public and now billable — no referrer restriction | T | **P0** | open — needs owner action |
 
 ---
 
@@ -115,7 +116,7 @@ rebuilding, so on a low-traffic site a crawler-facing page is almost always the 
 fix covers all four crawler-facing routes, `/events/[id]` included — its content is stable but its
 *indexability decision* is not.
 
-### 28. Google Maps billing not enabled · F · T
+### 28. Google Maps billing not enabled · F · T · **done 2026-11-11**
 **Why.** Every map on the site renders under a diagonal **"For development purposes only"**
 watermark, greyed and semi-transparent. The map is one of the two ways a parent decides whether an
 event is worth the drive, and the watermark reads as an unfinished product. This is a Google Cloud
@@ -124,6 +125,42 @@ serves in development mode. Left alone it does not get worse, but it never clear
 **Done when.** A billing account is attached to the Google Cloud project behind the Maps JS API
 key, the watermark is gone in production, and a budget alert exists so the free tier cannot be
 exceeded silently. **Owner action — not a code task.** **Size.** 15 minutes in the console.
+
+**⚠️ The severity above was understated, and the card was written from a guess.** Before sending
+the owner into the console I loaded the live map and read the browser console. The real error was
+`BillingNotEnabledMapError`, which is not the watermark state — it puts a **Google dialog on top
+of the map** reading *"This page can't load Google Maps correctly. Do you own this website?"* with
+an OK button, over greyed tiles. Every visitor who opened the map saw that. A diagnosis worth one
+minute of checking turned out to be a full grade more severe than the card claimed.
+
+**Closed 2026-11-11.** Billing attached by the owner; verified from the live site — clean
+full-colour map, pins rendering, Map/Satellite controls, **no console error**. Realistic cost
+stays $0: the Maps JavaScript API free allowance is ~10,000 map loads/month and this site is
+nowhere near it.
+
+**The follow-on that now matters more than it did.** The key is `NEXT_PUBLIC_*`, so it is visible
+in the page source to anyone. While billing was off, an unrestricted key cost nothing because
+nothing worked. **With billing attached, an unrestricted public key is a spending exposure** —
+someone can lift it and bill their own traffic to this project. Needs an HTTP-referrer restriction
+limited to `openeventz.com/*` plus the budget alert. Tracked as **#29**.
+
+### 29. The Maps key is public and now billable · T
+**Why.** `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is embedded in the page source by design — a browser
+map cannot work otherwise, and every Maps site has this. What changed on 2026-11-11 is the
+consequence. **Yesterday an unrestricted key was harmless, because the key did not work.** Today
+it bills a real account. Anyone can copy it out of the page and serve their own maps on our bill,
+and the first signal would be an invoice.
+**This is the risk that closing #28 created.** Worth stating plainly: a fix that resolves one
+problem can promote a dormant one, and the promotion is easy to miss because nothing on the
+dashboard changed.
+**Done when.** (a) The key carries an **HTTP-referrer restriction** limited to `openeventz.com/*`
+(Credentials → the key → Application restrictions). (b) It is **API-restricted** to the Maps
+JavaScript API only, so a leak cannot reach pricier products. (c) A **budget alert** exists at a
+low figure — $5/month with email at 50% and 100% — because the restriction is the control and the
+alert is the check on the control.
+**Severity note.** Low likelihood, unbounded cost. Nobody is hunting this site for keys. But the
+downside has no ceiling until (c) exists, which is why the budget alert matters even more than the
+restriction. **Owner action — not a code task.** **Size.** 10 minutes in the console.
 
 ---
 
