@@ -41,7 +41,7 @@ Links below point there, so they resolve from either side.
 | 4 | Sitemap has not regenerated in 24h+ | F · T | **P0** | done 11-10 |
 | 5 | Dry runs write `ingest_runs` records | T | P1 | done 10-22 |
 | 6 | No heartbeat — a run that never starts is silent | T | P1 | done 10-22 (partial — see item) |
-| 7 | Classification quality has no eval on change | T | P1 | **in progress — harness built 2026-11-11; needs labels + a CI trigger** |
+| 7 | Classification quality has no eval on change | T | P1 | **in CI 2026-11-11 — on change + weekly; 115 events still unlabelled** |
 | 30 | Kaleidoscope descriptions truncated by the source at ~200 chars | T | P1 | **fixed 2026-11-11 — cached rows still need re-classifying** |
 | 8 | Inferred dates are published but never graded | T | P1 | open |
 | 9 | No conversions since 2026-08-18 | F | P1 | open |
@@ -444,11 +444,14 @@ First run over the 8 survivors: 0 wrongly-free, 0 leaked, 3 over-claim (baseline
 1. **Labels.** 115 frozen events are unlabelled. `npm run eval:worksheet` generates the sheet and
    `-- --parse` reads it back, but the labelling is human time nobody can delegate. **A set of 8
    is an instrument, not a gate.**
-2. **Where it runs.** A model-calling test cannot sit on the per-push gate — paid API, minutes per
-   run, non-deterministic — so it would produce false reds, and a gate that cries wolf is routed
-   around within a week. Proposal: path-filtered on `src/lib/age-inference.ts` and the `MODEL`
-   constant, plus nightly for provider-side drift, re-running only the failed cases before
-   declaring a failure. **Needs a decision, not a sprint.**
+2. ~~**Where it runs.**~~ **Decided and built 2026-11-11** — `.github/workflows/classifier-eval.yml`:
+   blocking on a push touching the prompt, the model id, `price.ts`, `source-text.ts` or the golden
+   set; weekly on Monday, alerting by failing like the heartbeat, because provider-side drift moves
+   the answers while nothing in the repo moves. A failing score re-calls only the rows that failed a
+   blocking gate before failing the build. Weekly rather than nightly for noise reasons, not cost:
+   a measured run is $0.32 with the prompt cached, so nightly would be under $10/month, but a
+   non-deterministic suite run unattended every night produces a false red most weeks and the first
+   false red teaches everyone to stop reading the colour.
 
 **Scope correction on kid-relevance.** The problem statement above says it "has no golden set at
 all". It has 64 labels — but **60 of them are "yes"**, so a classifier that said yes to everything
