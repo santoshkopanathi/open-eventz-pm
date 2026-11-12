@@ -424,8 +424,13 @@ cost per run, since an eval nobody can afford to run is not a control.
 
 The first measurement reframed the task. Of the 64 labelled events, **8 still existed** — all 26
 Kaleidoscope rows purged after that connector was rebuilt and its id scheme changed, and 30 of 38
-Play Frisco rows aged off the city feed. The descriptions had never been copied into any file, so
-**56 human judgments are now permanently unscorable.** The harness had been printing a score the
+Play Frisco rows aged off the city feed. The descriptions had never been copied into any *machine-generated* file.
+
+**Corrected 2026-11-12.** They were in `eval/price-golden-worksheet.md` — the document the
+labeller filled in, tracked in git throughout — because that sheet quotes the full source text of
+every event by design. I had searched the JSON artefacts and not the human-facing one, which is
+backwards: a worksheet is the only artefact guaranteed to hold the question, since a label without
+it means nothing. `npm run eval:recover` restored all of them; **scorable went 8 → 64.** The harness had been printing a score the
 whole time; it skipped what it could not find and reported the remainder.
 
 | Blocker | State |
