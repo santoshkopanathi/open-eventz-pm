@@ -42,7 +42,7 @@ Links below point there, so they resolve from either side.
 | 5 | Dry runs write `ingest_runs` records | T | P1 | done 10-22 |
 | 6 | No heartbeat — a run that never starts is silent | T | P1 | done 10-22 (partial — see item) |
 | 7 | Classification quality has no eval on change | T | P1 | **in CI 2026-11-11 — on change + weekly; 115 events still unlabelled** |
-| 30 | Kaleidoscope descriptions truncated by the source at ~200 chars | T | P1 | **fixed 2026-11-11 — cached rows still need re-classifying** |
+| 30 | Kaleidoscope descriptions truncated by the source at ~200 chars | T | P1 | **closed 2026-11-12 — reclassified; 1 of 9 decisions changed** |
 | 8 | Inferred dates are published but never graded | T | P1 | open |
 | 9 | No conversions since 2026-08-18 | F | P1 | open |
 | 10 | Event archive / change log | T · F | P1 | parked by decision |
@@ -928,6 +928,32 @@ cache hit and makes no new call, so existing Kaleidoscope rows keep the decision
 given from truncated text. The better input only reaches the model for events it has not seen.
 **Clearing the cached inference for `source = 'kaleidoscope-park'` (~37 rows, roughly $0.23 in
 LLM calls) is the remaining step**, and it is a deliberate production write, not a side effect.
+
+### Closed 2026-11-12 — what the truncation actually cost
+
+Cleared the cached inference on the 17 rows whose input was truncated (not all 38 — the other 21
+always had their full text). 9 were reclassified on the recovered descriptions.
+
+| | |
+|---|---|
+| Decisions changed | **1** |
+| Visibility changes a parent would see | **0** |
+
+The one change: *Shop Local Vendor Market*, `age_confidence` medium → low, as its description grew
+215 → 528 chars. **The model got less confident with more information**, which is it behaving well:
+a confident answer drawn from truncated text is the over-claim pattern, and the fuller text
+revealed the ambiguity the short version hid.
+
+**Graded honestly: a real input defect with almost no measured impact.** The fix was correct on its
+own terms and the defect class is dangerous elsewhere, but the urgency was overstated before the
+measurement, and the measurement is what settles it.
+
+**One near-miss worth recording.** 8 of the 17 were past occurrences the nightly fetch no longer
+retrieves. Nulling `kid_relevant` hides a row, so those 8 would have stayed hidden permanently — a
+data fix that silently removes listings. Restored from the snapshot taken beforehand; NULL count
+back to 0, `npm run validate` green across 592 upcoming events. **A data fix that clears a field a
+fail-closed gate reads is a visibility change, and the rows that cannot be rewritten are exactly
+the ones nobody notices are gone.**
 
 **Metrics.** Count of stored descriptions ending in an ellipsis, by source (target: 0 where the
 page has more text) · classification changes after re-running the source with full text, which
