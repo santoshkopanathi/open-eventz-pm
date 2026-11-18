@@ -147,10 +147,16 @@ ORCHESTRATION LAYER:
   previously-correct data survives. "Correctness beats completeness" by construction.
 - Price is settled by a layered pipeline, and every row now RECORDS WHICH LAYER DECIDED IT
   (source Cost field / source-declared / institutional / model / two deterministic rules).
-  Live split across 2,377 rows: 2,252 institutional, 38 source-declared, 31 Cost-field,
-  56 model-judged — of which 35 rest on the free-by-default prior, i.e. 1.5% of the site.
   The column exists because "unknown" was reachable from a model abstention AND from one of
   my own rule overrides, and those need opposite fixes.
+  WHAT IT ACTUALLY HOLDS (measured 2026-11-18): 69 of 2,394 rows — all UPCOMING play-frisco
+  and kaleidoscope. 36 source-cost-field, 21 source-declared, 11 model, 1 rule-keyword,
+  ZERO source-institution. So 16% of visible prices on those two sources rest on a model
+  judgment. The 2,267 library rows are NULL because the library connectors never write the
+  column. DO NOT quote a site-wide split — an earlier version of this file did, and the
+  number predated the column that was supposed to produce it. That is itself the story worth
+  telling: "I shipped the column, wrote the distribution into three documents, and the column
+  was empty. Writing a number into a document is not the same as knowing it."
 
 GOVERNANCE LAYER:
 - GUARDRAILS vs EVALS, a distinction worth stating out loud: a GUARDRAIL runs on every
